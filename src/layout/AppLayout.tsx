@@ -10,6 +10,7 @@ import { Kbd, Spinner } from '@/components/ui/primitives'
 import { IssueModalHost } from '@/features/issue/IssueDetailModal'
 import { CreateIssueModal } from '@/features/issue/CreateIssueModal'
 import { GlobalSearch } from '@/features/search/GlobalSearch'
+import { AgentLaunchHost } from '@/features/agents/OpenInAgent'
 import { cn } from '@/lib/utils'
 
 const isTyping = (el: EventTarget | null) => {
@@ -152,6 +153,7 @@ export function AppLayout() {
       </div>
       <IssueModalHost />
       <CreateIssueModal />
+      <AgentLaunchHost />
       <GlobalSearch />
       <ShortcutsModal />
       <Toaster />

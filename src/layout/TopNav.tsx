@@ -1,6 +1,7 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { ChevronDown, HelpCircle, LayoutDashboard, LogOut, Moon, Plus, RotateCcw, Search, Settings, Star, Sun, Users, Filter, FolderKanban } from 'lucide-react'
+import { ChevronDown, HelpCircle, LayoutDashboard, LogOut, Moon, Plus, RotateCcw, Search, Settings, Star, Sun, Users, Filter, FolderKanban, UserCog } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
+import { useClerk } from '@clerk/react'
 import { useMe, useStore } from '@/store/store'
 import { useUI, toast } from '@/store/ui'
 import { Avatar, Logo } from '@/components/jira'
@@ -70,10 +71,9 @@ export function TopNav() {
   const recent = useStore((s) => s.recent)
   const filters = useStore((s) => s.filters)
   const dashboards = useStore((s) => s.dashboards)
-  const users = useStore((s) => s.users)
   const theme = useStore((s) => s.theme)
   const setTheme = useStore((s) => s.setTheme)
-  const setCurrentUser = useStore((s) => s.setCurrentUser)
+  const clerk = useClerk()
   const resetWorkspace = useStore((s) => s.resetWorkspace)
   const openCreate = useUI((s) => s.openCreate)
   const setSearchOpen = useUI((s) => s.setSearchOpen)
@@ -236,26 +236,23 @@ export function TopNav() {
             <Link to={`/people/${me.id}`} onClick={close} className="block px-4 py-2 text-[13px] hover:bg-hover">
               Profile
             </Link>
-            <div className="px-4 pt-2 pb-1 text-[11px] font-semibold tracking-wide text-subtle uppercase">Switch account</div>
-            {users
-              .filter((u) => u.id !== me.id && u.active)
-              .map((u) => (
-                <button
-                  key={u.id}
-                  onClick={() => {
-                    setCurrentUser(u.id)
-                    close()
-                    toast({ title: `Signed in as ${u.name}` })
-                  }}
-                  className="flex w-full items-center gap-2.5 px-4 py-1.5 text-left text-[13px] hover:bg-hover"
-                >
-                  <Avatar user={u} size="xs" showTooltip={false} />
-                  {u.name}
-                  <span className="ml-auto text-[11px] text-subtle">{u.title}</span>
-                </button>
-              ))}
+            <button
+              onClick={() => {
+                close()
+                clerk.openUserProfile()
+              }}
+              className="flex w-full items-center gap-2 px-4 py-2 text-left text-[13px] hover:bg-hover"
+            >
+              <UserCog className="size-4 text-muted" /> Manage account
+            </button>
             <div className="my-1 h-px bg-line" />
-            <button onClick={() => { close(); toast({ title: 'This is a local workspace — there is nothing to log out of.' }) }} className="flex w-full items-center gap-2 px-4 py-2 text-left text-[13px] hover:bg-hover">
+            <button
+              onClick={() => {
+                close()
+                void clerk.signOut({ redirectUrl: '/sign-in' })
+              }}
+              className="flex w-full items-center gap-2 px-4 py-2 text-left text-[13px] hover:bg-hover"
+            >
               <LogOut className="size-4 text-muted" /> Log out
             </button>
           </div>

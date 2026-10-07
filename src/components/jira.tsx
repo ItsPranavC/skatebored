@@ -27,7 +27,9 @@ export function Logo({ compact }: { compact?: boolean }) {
 const SIZE = { xs: 'size-5 text-[9px]', sm: 'size-6 text-[10px]', md: 'size-8 text-xs', lg: 'size-10 text-sm', xl: 'size-16 text-xl' }
 
 export function Avatar({ user, size = 'sm', className, showTooltip = true }: { user?: User | null; size?: keyof typeof SIZE; className?: string; showTooltip?: boolean }) {
-  const el = user ? (
+  const el = user?.avatarUrl ? (
+    <img src={user.avatarUrl} alt={user.name} referrerPolicy="no-referrer" className={cn('inline-block shrink-0 rounded-full object-cover ring-2 ring-surface', SIZE[size], className)} />
+  ) : user ? (
     <span
       className={cn('inline-grid shrink-0 place-items-center rounded-full font-bold text-[#160707] ring-2 ring-surface select-none', SIZE[size], className)}
       style={{ background: user.color }}

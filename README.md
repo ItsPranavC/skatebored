@@ -14,9 +14,17 @@ A full Jira-style scrum workspace for the [skatebored](https://www.skatebored.or
 | **Dashboards** | Configurable 2-column gadget dashboards |
 | **Planning** | Timeline (roadmap Gantt with drag / resize), releases (versions), components |
 | **Admin** | Projects (scrum & kanban templates), board columns & statuses, WIP limits, members, people directory and profiles |
+| **Coding agents** | “Open in coding tool” on every ticket (Development panel, issue ⋯ menu, board/backlog right-click): packages the ticket — description, sub-tasks, links, epic, recent comments, branch & commit conventions — into a prompt for Claude Code, Cursor, Codex, VS Code, GitHub Copilot CLI, Rovo Dev CLI or Gemini CLI. Desktop tools open via deep link; terminal tools get a copy-ready command (Claude Code can also open a terminal directly). Prompts are trimmed to each tool's limit, with the full context kept on the clipboard / downloadable as `KEY.md`. |
+| **Auth** | Clerk sign-in / sign-up with branded pages; each Clerk account is matched to a workspace member by email (created on first sign-in) |
 | **Everywhere** | Notifications, global search (`/` or `⌘K`), keyboard shortcuts (`?`), recent items, account switcher for demoing different team members |
 
 ## Run it
+
+Authentication uses [Clerk](https://clerk.com). Put your publishable key in `.env.local` (see `.env.example`), or let the Clerk CLI do it:
+
+```bash
+npx clerk auth login && npx clerk init --app <app_id> && npx clerk env pull
+```
 
 ```bash
 npm install
@@ -29,10 +37,29 @@ npm run build    # type-check + production build into dist/
 It's a static single-page app. `vercel.json` already rewrites every route to `index.html`:
 
 ```bash
+npx vercel env add VITE_CLERK_PUBLISHABLE_KEY   # once per environment
 npx vercel deploy --prod
 ```
 
+Use a `pk_live_…` key and add your production domain in the Clerk dashboard before going live.
+
 Any static host works if it rewrites unknown paths to `/index.html`.
+
+## Coding-agent hand-off
+
+Modelled on Jira's "Open in coding tool". Deep-link formats used:
+
+| Tool | Launch |
+| --- | --- |
+| Claude Code | `claude-cli://open?q=…&repo=…` (or copy `claude '…'`) |
+| Cursor | `cursor://anysphere.cursor-deeplink/prompt?text=…` |
+| Codex | `codex://new?prompt=…&originUrl=…` |
+| VS Code | `vscode://agents/new?prompt=…&workspace=…` |
+| GitHub Copilot | `copilot -i '…'` |
+| Rovo Dev CLI | `acli rovodev run '…'` |
+| Gemini CLI | `gemini -i '…'` |
+
+Set the project's GitHub repo (shared) and your local clone path (per browser) in the launch dialog so agents start in the right folder. Nothing is ever sent automatically: every tool shows the prompt for review first.
 
 ## Data & persistence
 

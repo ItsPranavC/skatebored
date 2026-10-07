@@ -380,10 +380,16 @@ export function Modal({
   bodyClassName?: string
   hideClose?: boolean
 }) {
+  const dialogRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !e.defaultPrevented) onClose()
+      if (e.key !== 'Escape' || e.defaultPrevented) return
+      // Only the topmost dialog closes; marking the event stops stacked dialogs below from closing too.
+      const dialogs = document.querySelectorAll('[role="dialog"]')
+      if (dialogs[dialogs.length - 1] !== dialogRef.current) return
+      e.preventDefault()
+      onClose()
     }
     document.addEventListener('keydown', onKey)
     const prev = document.body.style.overflow
@@ -397,6 +403,7 @@ export function Modal({
   return createPortal(
     <div className="fixed inset-0 z-[900] flex items-start justify-center overflow-y-auto bg-black/60 p-4 pt-[6vh] backdrop-blur-[2px]" onMouseDown={onClose}>
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         onMouseDown={(e) => e.stopPropagation()}

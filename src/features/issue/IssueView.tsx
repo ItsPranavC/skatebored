@@ -10,6 +10,9 @@ import { Button } from '@/components/ui/primitives'
 import { cn } from '@/lib/utils'
 import { ProjectAvatar } from '@/layout/TopNav'
 import { DetailsPanel } from './DetailsPanel'
+import { AgentIcon, DevelopmentPanel } from '@/features/agents/OpenInAgent'
+import { useAgentLaunch, useAgentPrefs } from '@/features/agents/prefs'
+import { agentById } from '@/features/agents/agents'
 import { Activity, type ActivityHandle } from './Activity'
 import { Attachments, ChildIssues, Description, LinkedIssues, readFilesAsAttachments } from './Sections'
 import { LogWorkModal } from './LogWorkModal'
@@ -182,6 +185,7 @@ export function IssueView({ issue, variant, onClose }: { issue: Issue; variant: 
   const typeOptions = issue.type === 'subtask' ? issueTypeOptions(false, true).filter((o) => o.value === 'subtask') : issueTypeOptions(true, false)
 
   const ops: { label: string; icon: ReactNode; onClick: () => void; danger?: boolean; hidden?: boolean }[] = [
+    { label: `Open in ${agentById(useAgentPrefs.getState().lastAgentId).name}…`, icon: <AgentIcon id={agentById(useAgentPrefs.getState().lastAgentId).id} />, onClick: () => useAgentLaunch.getState().open(issue.id) },
     { label: 'Log work', icon: <Clock className="size-4" />, onClick: () => setLogWork(true) },
     { label: issue.flagged ? 'Remove flag' : 'Add flag', icon: <Flag className="size-4" />, onClick: () => update(issue.id, { flagged: !issue.flagged }) },
     {
@@ -348,6 +352,7 @@ export function IssueView({ issue, variant, onClose }: { issue: Issue; variant: 
             <StatusPicker issue={issue} project={project} />
             {project.statuses.find((s) => s.id === issue.statusId)?.category === 'done' && <span className="text-[12px] font-medium text-done-fg">✓ Done</span>}
           </div>
+          <DevelopmentPanel issue={issue} />
           <DetailsPanel issue={issue} project={project} controls={{ assigneeOpen, setAssigneeOpen, labelsEditing, setLabelsEditing, onLogWork: () => setLogWork(true) }} />
         </aside>
       </div>

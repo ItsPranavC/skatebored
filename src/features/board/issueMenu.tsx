@@ -7,6 +7,9 @@ import { toast } from '@/store/ui'
 import { cn } from '@/lib/utils'
 import { ConfirmDialog, type MenuItem } from '@/components/ui/overlay'
 import { useIssueModal } from '@/components/jira'
+import { AgentIcon } from '@/features/agents/OpenInAgent'
+import { useAgentLaunch, useAgentPrefs } from '@/features/agents/prefs'
+import { agentById } from '@/features/agents/agents'
 
 export interface IssueMenuContext {
   /** ordered ids of the container the issue lives in (for top/bottom moves) */
@@ -30,6 +33,10 @@ export function useIssueMenu(project: Project) {
     const many = ids.length > 1
     const out: MenuItem[] = []
     if (!many) out.push({ label: 'Open issue', icon: <ExternalLink className="size-4" />, onClick: () => open(issue.key) })
+    if (!many) {
+      const agent = agentById(useAgentPrefs.getState().lastAgentId)
+      out.push({ label: `Open in ${agent.name}…`, icon: <AgentIcon id={agent.id} />, onClick: () => useAgentLaunch.getState().open(issue.id, agent.id) })
+    }
     out.push({
       label: 'Copy link',
       icon: <Link2 className="size-4" />,

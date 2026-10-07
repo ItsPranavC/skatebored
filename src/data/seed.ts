@@ -334,6 +334,7 @@ export function buildSeed(): SeedData {
     memberIds: users.map((u) => u.id),
     starred: true,
     estimation: 'points',
+    repo: null,
     components: [
       { id: 'cmp-web', name: 'Learner web app', description: 'skatebored.org front end', leadId: 'u6' },
       { id: 'cmp-ml', name: 'Recommender', description: 'Adaptive engine & models', leadId: 'u4' },

@@ -11,6 +11,10 @@ export interface User {
   title: string
   color: string
   active: boolean
+  /** Profile photo from the identity provider (Clerk) */
+  avatarUrl?: string | null
+  /** Clerk user id once this person has signed in */
+  clerkId?: string | null
 }
 
 export interface Status {
@@ -61,6 +65,8 @@ export interface Project {
   versions: Version[]
   issueCounter: number
   starred: boolean
+  /** GitHub "owner/name" slug — lets coding agents open the right local clone. */
+  repo?: string | null
   /** Board "estimation statistic" — story points or issue count. */
   estimation: 'points' | 'count'
   createdAt: string
