@@ -20,7 +20,13 @@ A full Jira-style scrum workspace for the [skatebored](https://www.skatebored.or
 
 ## Run it
 
-Authentication uses [Clerk](https://clerk.com). Put your publishable key in `.env.local` (see `.env.example`), or let the Clerk CLI do it:
+Authentication uses [Clerk](https://clerk.com); data lives in Neon Postgres + Vercel Blob. Link the project and pull env vars once:
+
+```bash
+vercel link && vercel env pull .env.development.local --yes
+```
+
+`npm run dev` serves the `/api` functions locally (same database as production). Clerk keys go in `.env.local` (see `.env.example`), or let the Clerk CLI do it:
 
 ```bash
 npx clerk auth login && npx clerk init --app <app_id> && npx clerk env pull
@@ -63,9 +69,33 @@ Set the project's GitHub repo (shared) and your local clone path (per browser) i
 
 ## Data & persistence
 
-All state lives in one Zustand store (`src/store/store.ts`) and is saved to `localStorage` under `skatebored-scrum`. On first load it's seeded with a realistic skatebored workspace (`src/data/seed.ts`). The seed dates are relative to today, so the active sprint and charts always look current. To start over, use **Settings → Reset demo workspace**.
+The workspace lives in **Neon Postgres** (provisioned through the Vercel Marketplace); attachments live in a **private Vercel Blob** store. Every API call is verified against the user's Clerk session.
 
-To make the workspace multi-user, swap the `persist` storage in `store.ts` for a backend (e.g. Postgres via the Vercel Marketplace). Every mutation already goes through a named store action, so each one maps directly to an API call.
+| Piece | Where |
+| --- | --- |
+| Sync API (pull since version N / push a batch of changes) | `api/sync.ts` → `server/sync.ts` |
+| Attachments (upload / authenticated download) | `api/files.ts` → `server/files.ts` |
+| Record counts (signed-in only) | `api/status.ts` |
+| Client sync engine + status indicator | `src/sync/` |
+
+How it keeps data safe:
+
+- **Per-record, field-level sync.** Each change is sent as a patch of the fields that changed, so two people editing different fields of one issue never overwrite each other. Writes to a workspace are serialized in a transaction.
+- **Server-assigned issue keys.** If two people create `SKB-70` at the same moment, one is renumbered and told about it.
+- **Nothing is hard-deleted.** Deleting keeps the record's last data (`deleted = true`), so it can be restored.
+- **Offline-safe outbox.** Unsent changes are kept in the browser, retried with backoff, adopted by another tab if this one closes, and block sign-out until they're saved. The top-bar cloud icon shows Saved / Saving / Offline · N queued.
+- **First sync.** An empty cloud is seeded from the first browser that connects. A browser connecting to an existing cloud adopts it, uploads records that exist only locally, and keeps a backup of its old local copy (`skatebored-backup:*` in localStorage).
+- **Pagination.** Pulls and pushes stay well under Vercel's 4.5 MB request/response limits.
+
+Per-person preferences (theme, recent items, board view, coding-agent settings) intentionally stay in the browser.
+
+Run the integration test (real database + Clerk tokens, isolated throwaway workspace):
+
+```bash
+npm run test:sync
+```
+
+Optional access control (server env vars): `ALLOWED_EMAIL_DOMAINS=skatebored.org` and/or `ALLOWED_EMAILS=a@x.com,b@y.com`. Without them, anyone who can sign in to your Clerk app can use the workspace.
 
 ## Structure
 
