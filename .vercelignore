@@ -1,0 +1,8 @@
+.env
+.env.*
+!.env.example
+scripts/
+.claude-memory.md
+.claude/
+node_modules
+dist

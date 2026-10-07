@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useState } from 'react'
-import { Check, ChevronDown, Copy, Download, ExternalLink, FileText, GitBranch, Monitor, SquareTerminal, Wand2 } from 'lucide-react'
+import { Check, ChevronDown, Copy, Download, ExternalLink, FileText, FolderOpen, GitBranch, Monitor, SquareTerminal, Wand2 } from 'lucide-react'
 import type { Issue, Project } from '@/types'
 import { useStore } from '@/store/store'
 import { toast } from '@/store/ui'
@@ -44,7 +44,14 @@ function openDeepLink(url: string, agent: AgentDef) {
   let left = false
   const onBlur = () => (left = true)
   window.addEventListener('blur', onBlur, { once: true })
-  window.location.href = url
+  // A real anchor click is the most reliable way to hand a custom scheme to the OS from Chrome/Safari.
+  const a = document.createElement('a')
+  a.href = url
+  a.rel = 'noopener'
+  a.style.display = 'none'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
   setTimeout(() => {
     window.removeEventListener('blur', onBlur)
     if (!left && document.hasFocus())
@@ -68,16 +75,22 @@ export function useLaunchAgent() {
   return (issue: Issue, agentId: string) => {
     const agent = agentById(agentId)
     setLast(agent.id)
-    if (agent.kind === 'terminal' || !agent.deepLink) return openModal(issue.id, agent.id)
+    if (!agent.deepLink) return openModal(issue.id, agent.id)
     const s = useStore.getState()
     const project = s.projects.find((p) => p.id === issue.projectId)
     const prefs = useAgentPrefs.getState()
     const target = { repo: project?.repo ?? null, path: (project && prefs.localPaths[project.id]) || null }
+    // Ask where the code lives first, instead of dropping the agent into your home folder.
+    if (agent.needsFolder && !target.repo && !target.path) return openModal(issue.id, agent.id)
     const fitted = fitPrompt(issue, s, prefs.context, agent, target)
     void copy(fitted.full)
     toast({
       title: `Opening ${issue.key} in ${agent.name}`,
-      description: fitted.trimmed ? `Prompt trimmed to fit ${agent.name}’s link limit — the full context is on your clipboard.` : 'Review the prompt, then send it. A copy is on your clipboard.',
+      description: fitted.trimmed
+        ? `Prompt trimmed to fit ${agent.name}’s link limit — the full context is on your clipboard.`
+        : agent.kind === 'terminal'
+          ? 'A new terminal window opens with the prompt typed in — press Enter to start. A copy is on your clipboard.'
+          : 'Review the prompt, then send it. A copy is on your clipboard.',
       tone: 'success',
     })
     openDeepLink(agent.deepLink(fitted.prompt, target), agent)
@@ -345,6 +358,17 @@ function AgentLaunchModal({ issue }: { issue: Issue }) {
         ))}
       </div>
 
+      {agent.needsFolder && !target.repo && !target.path && (
+        <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-warn/40 bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] p-3 text-[13px]">
+          <FolderOpen className="mt-0.5 size-4 shrink-0 text-warn" />
+          <div>
+            <div className="font-semibold">Where’s the code for {project?.name}?</div>
+            <div className="text-muted">
+              Set the GitHub repository or your local folder on the right so {agent.name} opens in the project — otherwise it starts in your home folder. You only do this once.
+            </div>
+          </div>
+        </div>
+      )}
       <div className="grid gap-5 md:grid-cols-[1fr_260px]">
         <div className="min-w-0 space-y-3">
           <div>

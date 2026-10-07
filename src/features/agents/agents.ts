@@ -24,6 +24,8 @@ export interface AgentDef {
   limit: number
   /** limit applies to the encoded URL, not the raw prompt */
   limitIsUrl?: boolean
+  /** Without a repo/folder the tool opens somewhere unhelpful (e.g. your home folder). */
+  needsFolder?: boolean
   deepLink?: (prompt: string, t: LaunchTarget) => string
   command?: (prompt: string, t: LaunchTarget) => string
   docs: string
@@ -40,6 +42,7 @@ const cd = (t: LaunchTarget) => (t.path ? `cd ${shellQuote(t.path)} && ` : '')
 export const AGENTS: AgentDef[] = [
   {
     id: 'claude-code',
+    needsFolder: true,
     name: 'Claude Code',
     vendor: 'Anthropic',
     kind: 'terminal',
@@ -69,6 +72,7 @@ export const AGENTS: AgentDef[] = [
   },
   {
     id: 'codex',
+    needsFolder: true,
     name: 'Codex',
     vendor: 'OpenAI',
     kind: 'desktop',
@@ -98,6 +102,7 @@ export const AGENTS: AgentDef[] = [
   },
   {
     id: 'vscode',
+    needsFolder: true,
     name: 'VS Code',
     vendor: 'Microsoft',
     kind: 'desktop',

@@ -8,6 +8,8 @@ import { Avatar, Logo } from '@/components/jira'
 import { Menu, Popover, ConfirmDialog } from '@/components/ui/overlay'
 import { Button, Kbd } from '@/components/ui/primitives'
 import { NotificationsButton } from '@/features/notifications/NotificationsPanel'
+import { SyncIndicator } from '@/sync/SyncIndicator'
+import { signOutCleanup } from '@/sync/engine'
 import { CreateProjectModal } from '@/features/project/CreateProjectModal'
 import { cn } from '@/lib/utils'
 
@@ -191,6 +193,7 @@ export function TopNav() {
       </button>
       <Button variant="ghost" className="md:hidden" icon={<Search className="size-4" />} onClick={() => setSearchOpen(true)} aria-label="Search" />
 
+      <SyncIndicator />
       <NotificationsButton />
 
       <Menu
@@ -249,7 +252,12 @@ export function TopNav() {
             <button
               onClick={() => {
                 close()
-                void clerk.signOut({ redirectUrl: '/sign-in' })
+                void (async () => {
+                  // Never sign out with unsent changes; on success, clear cached company data from this device.
+                  if (!(await signOutCleanup())) return toast({ title: 'Some changes haven’t reached the cloud yet', description: 'Reconnect, wait for “Saved”, then log out.', tone: 'error' })
+                  await clerk.signOut({ redirectUrl: '/sign-in' })
+                  window.location.reload()
+                })()
               }}
               className="flex w-full items-center gap-2 px-4 py-2 text-left text-[13px] hover:bg-hover"
             >
@@ -268,10 +276,10 @@ export function TopNav() {
           navigate('/your-work')
           toast({ title: 'Workspace reset to demo data', tone: 'success' })
         }}
-        title="Reset the demo workspace?"
-        confirmLabel="Reset"
+        title="Reset the workspace for everyone?"
+        confirmLabel="Reset for everyone"
       >
-        Every project, issue, sprint, comment and filter will be replaced with the original skatebored demo data. This can’t be undone.
+        Every project, issue, sprint, comment and filter will be replaced with the original skatebored demo data — for the whole team, not just you. Deleted records stay recoverable in the database, but this is not something to click casually.
       </ConfirmDialog>
     </header>
   )

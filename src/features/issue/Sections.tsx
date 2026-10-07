@@ -1,11 +1,12 @@
 import { useState, type ReactNode } from 'react'
 import { Download, FileText, Plus, Trash2, X } from 'lucide-react'
-import type { Issue, IssueType, LinkType, Project } from '@/types'
+import type { Attachment, Issue, IssueType, LinkType, Project } from '@/types'
 import { useStore } from '@/store/store'
 import { toast } from '@/store/ui'
 import { Avatar, IssueTypeIcon, PriorityIcon, StatusPicker, useIssueModal } from '@/components/jira'
 import { Popover, Select, SelectList, ConfirmDialog } from '@/components/ui/overlay'
-import { Button, ProgressBar } from '@/components/ui/primitives'
+import { Button, ProgressBar, Spinner } from '@/components/ui/primitives'
+import { MAX_ATTACHMENT_BYTES, uploadAttachment, useAttachmentUrl } from '@/sync/files'
 import { cn, fmtDate } from '@/lib/utils'
 import { RichText } from './RichText'
 import { MentionTextarea } from './editors'
@@ -88,31 +89,55 @@ export function Description({ issue }: { issue: Issue }) {
 
 // ───────────────────────────── Attachments ─────────────────────────────
 
-const MAX_BYTES = 1.5 * 1024 * 1024
-
 export function readFilesAsAttachments(issue: Issue, files: FileList | null) {
   if (!files) return
   const add = useStore.getState().addAttachment
-  const remove = useStore.getState().removeAttachment
   for (const file of Array.from(files)) {
-    if (file.size > MAX_BYTES) {
-      toast({ title: `${file.name} is too large`, description: 'Attachments are stored in this browser — keep them under 1.5 MB.', tone: 'error' })
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      toast({ title: `${file.name} is too large`, description: 'Attachments can be up to 4 MB.', tone: 'error' })
       continue
     }
-    const reader = new FileReader()
-    reader.onload = () => {
-      try {
-        add(issue.id, { name: file.name, size: file.size, mime: file.type || 'application/octet-stream', url: String(reader.result) })
+    toast({ title: `Uploading ${file.name}…` })
+    uploadAttachment(file)
+      .then((url) => {
+        add(issue.id, { name: file.name, size: file.size, mime: file.type || 'application/octet-stream', url })
         toast({ title: `Attached ${file.name}`, tone: 'success' })
-      } catch {
-        // localStorage quota exceeded — roll back so the in-memory state matches what's persisted
-        const att = useStore.getState().issues.find((i) => i.id === issue.id)?.attachments.find((a) => a.name === file.name)
-        if (att) remove(issue.id, att.id)
-        toast({ title: 'Browser storage is full', description: 'Remove some attachments and try again.', tone: 'error' })
-      }
-    }
-    reader.readAsDataURL(file)
+      })
+      .catch((e: Error) => toast({ title: `Couldn’t upload ${file.name}`, description: e.message, tone: 'error' }))
   }
+}
+
+function AttachmentCard({ a, onDelete }: { a: Attachment; onDelete: () => void }) {
+  const { src, failed } = useAttachmentUrl(a.url)
+  return (
+    <div className="group relative overflow-hidden rounded-lg border border-line bg-surface-2">
+      <a href={src ?? undefined} download={a.name} className="block" aria-disabled={!src}>
+        {a.mime.startsWith('image/') && src ? (
+          <img src={src} alt={a.name} className="h-24 w-full object-cover" />
+        ) : (
+          <div className="grid h-24 place-items-center bg-surface-3">
+            {!src && !failed ? <Spinner /> : <FileText className={cn('size-8', failed ? 'text-accent' : 'text-subtle')} />}
+          </div>
+        )}
+        <div className="px-2 py-1.5">
+          <div className="truncate text-[12px] font-medium">{a.name}</div>
+          <div className="text-[11px] text-subtle">
+            {failed ? 'Couldn’t load' : `${fmtSize(a.size)} · ${fmtDate(a.createdAt, 'd MMM')}`}
+          </div>
+        </div>
+      </a>
+      <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 transition group-hover:opacity-100">
+        {src && (
+          <a href={src} download={a.name} className="grid size-6 place-items-center rounded-md bg-canvas/80 text-fg hover:bg-canvas" aria-label="Download">
+            <Download className="size-3.5" />
+          </a>
+        )}
+        <button onClick={onDelete} className="grid size-6 place-items-center rounded-md bg-canvas/80 text-fg hover:text-accent" aria-label="Delete attachment">
+          <Trash2 className="size-3.5" />
+        </button>
+      </div>
+    </div>
+  )
 }
 
 const fmtSize = (n: number) => (n > 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} MB` : n > 1024 ? `${Math.round(n / 1024)} KB` : `${n} B`)
@@ -132,35 +157,11 @@ export function Attachments({ issue, onAttach }: { issue: Issue; onAttach: () =>
       </SectionTitle>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2">
         {issue.attachments.map((a) => (
-          <div key={a.id} className="group relative overflow-hidden rounded-lg border border-line bg-surface-2">
-            <a href={a.url} download={a.name} className="block">
-              {a.mime.startsWith('image/') ? (
-                <img src={a.url} alt={a.name} className="h-24 w-full object-cover" />
-              ) : (
-                <div className="grid h-24 place-items-center bg-surface-3">
-                  <FileText className="size-8 text-subtle" />
-                </div>
-              )}
-              <div className="px-2 py-1.5">
-                <div className="truncate text-[12px] font-medium">{a.name}</div>
-                <div className="text-[11px] text-subtle">
-                  {fmtSize(a.size)} · {fmtDate(a.createdAt, 'd MMM')}
-                </div>
-              </div>
-            </a>
-            <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 transition group-hover:opacity-100">
-              <a href={a.url} download={a.name} className="grid size-6 place-items-center rounded-md bg-canvas/80 text-fg hover:bg-canvas" aria-label="Download">
-                <Download className="size-3.5" />
-              </a>
-              <button onClick={() => setDoomed(a.id)} className="grid size-6 place-items-center rounded-md bg-canvas/80 text-fg hover:text-accent" aria-label="Delete attachment">
-                <Trash2 className="size-3.5" />
-              </button>
-            </div>
-          </div>
+          <AttachmentCard key={a.id} a={a} onDelete={() => setDoomed(a.id)} />
         ))}
       </div>
       <ConfirmDialog open={!!doomed} onClose={() => setDoomed(null)} onConfirm={() => doomed && remove(issue.id, doomed)} title="Delete this attachment?">
-        The file will be permanently removed from this issue.
+        The file will be removed from this issue.
       </ConfirmDialog>
     </section>
   )

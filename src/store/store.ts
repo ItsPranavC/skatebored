@@ -39,6 +39,8 @@ export interface State extends SeedData {
   recent: RecentItem[]
   sidebarCollapsed: boolean
   version: number
+  /** Last cloud version merged into this cached copy (persisted together with the data). */
+  syncCursor: number | null
 }
 
 export interface Actions {
@@ -112,6 +114,55 @@ export interface Actions {
 
 export type Store = State & Actions
 
+/**
+ * localStorage that never throws. The cloud is the source of truth; if the browser cache
+ * is full or blocked we keep working in memory instead of crashing.
+ */
+const safeLocalStorage: Storage = {
+  get length() {
+    try {
+      return localStorage.length
+    } catch {
+      return 0
+    }
+  },
+  key: (i) => {
+    try {
+      return localStorage.key(i)
+    } catch {
+      return null
+    }
+  },
+  getItem: (k) => {
+    try {
+      return localStorage.getItem(k)
+    } catch {
+      return null
+    }
+  },
+  setItem: (k, v) => {
+    try {
+      localStorage.setItem(k, v)
+    } catch (e) {
+      console.warn('[skatebored] local cache not saved (storage full or blocked) — changes are still synced to the cloud', e)
+    }
+  },
+  removeItem: (k) => {
+    try {
+      localStorage.removeItem(k)
+    } catch {
+      /* ignore */
+    }
+  },
+  clear: () => {
+    try {
+      localStorage.clear()
+    } catch {
+      /* ignore */
+    }
+  },
+}
+
 const initialState = (): State => ({
   ...buildSeed(),
   currentUserId: 'u1',
@@ -119,6 +170,7 @@ const initialState = (): State => ({
   recent: [],
   sidebarCollapsed: false,
   version: 1,
+  syncCursor: null,
 })
 
 // ─── helpers to describe field changes in history (Jira "History" tab) ───
@@ -204,7 +256,7 @@ export const useStore = create<Store>()(
           set((s) => ({
             recent: [{ ...item, at: nowISO() }, ...s.recent.filter((r) => !(r.kind === item.kind && r.id === item.id))].slice(0, 30),
           })),
-        resetWorkspace: () => set({ ...initialState(), theme: get().theme }),
+        resetWorkspace: () => set({ ...initialState(), theme: get().theme, syncCursor: get().syncCursor }),
 
         createUser: (u) => {
           const user: User = { ...u, id: uid('u'), active: true }
@@ -685,8 +737,19 @@ export const useStore = create<Store>()(
     },
     {
       name: 'skatebored-scrum',
-      version: 1,
-      storage: createJSONStorage(() => localStorage),
+      version: 2,
+      storage: createJSONStorage(() => safeLocalStorage),
+      // v1 → v2: adds syncCursor. Missing fields are filled from defaults by `merge`.
+      migrate: (persisted) => ({ ...(persisted as object), syncCursor: null }) as Store,
+      // Deep-enough merge: keep every persisted field, fall back to defaults for new ones.
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<State>
+        const out = { ...current, ...p } as Store
+        for (const k of ['users', 'projects', 'sprints', 'issues', 'comments', 'history', 'worklogs', 'notifications', 'filters', 'dashboards', 'recent'] as const) {
+          if (!Array.isArray(out[k])) (out as unknown as Record<string, unknown>)[k] = current[k]
+        }
+        return out
+      },
     },
   ),
 )
