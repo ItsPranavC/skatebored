@@ -1,12 +1,12 @@
-import { useEffect, useRef } from 'react'
-import { Outlet, useNavigate, useParams } from 'react-router-dom'
+import { Suspense, useEffect, useRef } from 'react'
+import { matchPath, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { CheckCircle2, X, AlertCircle } from 'lucide-react'
 import { TopNav } from './TopNav'
 import { ProjectSidebar } from './ProjectSidebar'
 import { useProjectByKey, useStore } from '@/store/store'
 import { useUI } from '@/store/ui'
 import { Modal } from '@/components/ui/overlay'
-import { Kbd } from '@/components/ui/primitives'
+import { Kbd, Spinner } from '@/components/ui/primitives'
 import { IssueModalHost } from '@/features/issue/IssueDetailModal'
 import { CreateIssueModal } from '@/features/issue/CreateIssueModal'
 import { GlobalSearch } from '@/features/search/GlobalSearch'
@@ -19,7 +19,8 @@ const isTyping = (el: EventTarget | null) => {
 
 function useGlobalShortcuts() {
   const navigate = useNavigate()
-  const { projectKey } = useParams()
+  const location = useLocation()
+  const projectKey = matchPath('/projects/:projectKey/*', location.pathname)?.params.projectKey
   const pending = useRef<string | null>(null)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -158,6 +159,12 @@ export function AppLayout() {
   )
 }
 
+const PageSpinner = () => (
+  <div className="grid h-full place-items-center">
+    <Spinner />
+  </div>
+)
+
 /** Wraps project routes with the project sidebar and records the visit. */
 export function ProjectLayout() {
   const { projectKey } = useParams()
@@ -179,7 +186,9 @@ export function ProjectLayout() {
     <>
       <ProjectSidebar />
       <main className="min-w-0 flex-1 overflow-auto">
-        <Outlet />
+        <Suspense fallback={<PageSpinner />}>
+          <Outlet />
+        </Suspense>
       </main>
     </>
   )
@@ -189,7 +198,9 @@ export function ProjectLayout() {
 export function PlainLayout() {
   return (
     <main className="min-w-0 flex-1 overflow-auto">
-      <Outlet />
+      <Suspense fallback={<PageSpinner />}>
+        <Outlet />
+      </Suspense>
     </main>
   )
 }

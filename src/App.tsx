@@ -1,24 +1,27 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AppLayout, PlainLayout, ProjectLayout } from '@/layout/AppLayout'
-import BoardPage from '@/pages/BoardPage'
-import BacklogPage from '@/pages/BacklogPage'
-import IssuePage from '@/pages/IssuePage'
-import ReportsPage from '@/pages/ReportsPage'
-import DashboardsPage from '@/pages/DashboardsPage'
-import DashboardPage from '@/pages/DashboardPage'
-import ProjectsPage from '@/pages/ProjectsPage'
-import TimelinePage from '@/pages/TimelinePage'
-import ReleasesPage from '@/pages/ReleasesPage'
-import ProjectSettingsPage from '@/pages/ProjectSettingsPage'
-import PeoplePage from '@/pages/PeoplePage'
-import IssuesSearchPage from '@/pages/IssuesSearchPage'
-import FiltersPage from '@/pages/FiltersPage'
-import YourWorkPage from '@/pages/YourWorkPage'
-import NotFoundPage from '@/pages/NotFoundPage'
+import { Spinner } from '@/components/ui/primitives'
+const BoardPage = lazy(() => import('@/pages/BoardPage'))
+const BacklogPage = lazy(() => import('@/pages/BacklogPage'))
+const IssuePage = lazy(() => import('@/pages/IssuePage'))
+const ReportsPage = lazy(() => import('@/pages/ReportsPage'))
+const DashboardsPage = lazy(() => import('@/pages/DashboardsPage'))
+const DashboardPage = lazy(() => import('@/pages/DashboardPage'))
+const ProjectsPage = lazy(() => import('@/pages/ProjectsPage'))
+const TimelinePage = lazy(() => import('@/pages/TimelinePage'))
+const ReleasesPage = lazy(() => import('@/pages/ReleasesPage'))
+const ProjectSettingsPage = lazy(() => import('@/pages/ProjectSettingsPage'))
+const PeoplePage = lazy(() => import('@/pages/PeoplePage'))
+const IssuesSearchPage = lazy(() => import('@/pages/IssuesSearchPage'))
+const FiltersPage = lazy(() => import('@/pages/FiltersPage'))
+const YourWorkPage = lazy(() => import('@/pages/YourWorkPage'))
+const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'))
 
 export default function App() {
   return (
     <BrowserRouter>
+      <Suspense fallback={<div className="grid h-full place-items-center"><Spinner /></div>}>
       <Routes>
         <Route element={<AppLayout />}>
           <Route index element={<Navigate to="/your-work" replace />} />
@@ -49,6 +52,7 @@ export default function App() {
           </Route>
         </Route>
       </Routes>
+      </Suspense>
     </BrowserRouter>
   )
 }

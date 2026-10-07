@@ -1,32 +1,56 @@
-# React + TypeScript + Vite
+# skatebored · scrum
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A full Jira-style scrum workspace for the [skatebored](https://www.skatebored.org/) team, styled after the skatebored brand: black canvas, cream ink (`#f4dac8`), flame-red accent (`#f04c4c`), deck brown (`#3D2412`), tight Helvetica Neue display type, and pill CTAs. There's a light theme too (Settings → Switch to light theme).
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+| Area | What's there |
+| --- | --- |
+| **Board** | Active sprint board, drag & drop between columns and within them (ranking), WIP limits, swimlanes (assignee / epic / priority / subtask), quick filters, avatar filters, card context menu, inline create, complete sprint |
+| **Backlog** | Sprint containers + backlog, multi-select drag & drop between sprints, start / edit / complete / delete sprints, epics panel, inline create, point totals by status |
+| **Issues** | Full issue view (modal via `?selectedIssue=KEY` or page at `/browse/KEY`): inline-edited fields, workflow transitions, sub-tasks, child issues, links, attachments, comments with @mentions, history, work log and time tracking, watchers, clone, flag, delete |
+| **Search** | Real JQL engine (`AND/OR/NOT`, `= != ~ !~ > >= < <= IN, NOT IN, IS [NOT] EMPTY`, `currentUser()`, `openSprints()`, relative dates like `-7d`, `ORDER BY`), basic mode, saved filters, bulk change, CSV export |
+| **Reports** | Burndown, burnup, sprint report, velocity, cumulative flow, control chart, created vs resolved, pie charts, epic / version / time-tracking / workload reports |
+| **Dashboards** | Configurable 2-column gadget dashboards |
+| **Planning** | Timeline (roadmap Gantt with drag / resize), releases (versions), components |
+| **Admin** | Projects (scrum & kanban templates), board columns & statuses, WIP limits, members, people directory and profiles |
+| **Everywhere** | Notifications, global search (`/` or `⌘K`), keyboard shortcuts (`?`), recent items, account switcher for demoing different team members |
 
-## React Compiler
+## Run it
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev      # http://localhost:5173
+npm run build    # type-check + production build into dist/
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Deploy
+
+It's a static single-page app. `vercel.json` already rewrites every route to `index.html`:
+
+```bash
+npx vercel deploy --prod
+```
+
+Any static host works if it rewrites unknown paths to `/index.html`.
+
+## Data & persistence
+
+All state lives in one Zustand store (`src/store/store.ts`) and is saved to `localStorage` under `skatebored-scrum`. On first load it's seeded with a realistic skatebored workspace (`src/data/seed.ts`). The seed dates are relative to today, so the active sprint and charts always look current. To start over, use **Settings → Reset demo workspace**.
+
+To make the workspace multi-user, swap the `persist` storage in `store.ts` for a backend (e.g. Postgres via the Vercel Marketplace). Every mutation already goes through a named store action, so each one maps directly to an API call.
+
+## Structure
+
+```
+src/
+  types.ts              domain model (Project, Issue, Sprint, …)
+  store/store.ts        all state + actions (history, notifications, sprint lifecycle)
+  store/ui.ts           transient UI state (create modal, toasts, search)
+  lib/jql.ts            JQL tokenizer / parser / evaluator
+  data/seed.ts          demo workspace generator
+  components/           design-system primitives + Jira atoms (avatars, lozenges, pickers)
+  layout/               top nav, project sidebar, shortcuts
+  features/             board, backlog, issue, reports, dashboard, search, timeline, settings…
+  pages/                route components
+```

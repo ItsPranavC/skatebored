@@ -156,6 +156,18 @@ const SKB_LOOSE: [IssueType, string, number | null, Priority?, string[]?][] = [
   ['task', 'Write ADR: event stream storage choice', 1, 'medium', ['docs']],
   ['bug', 'Typed cursor colour invisible on black background', 1, 'low', ['polish']],
   ['task', 'Load test recommender at 500 rps', 3, 'medium', ['perf']],
+  ['story', 'Teacher dashboard: class mastery heatmap', 8, 'high', ['teachers']],
+  ['story', 'Parent weekly progress email', 3, 'low', ['growth']],
+  ['bug', 'Lesson audio desyncs after pausing twice', 2, 'high', ['player']],
+  ['task', 'GDPR data export for learner accounts', 3, 'high', ['privacy']],
+  ['story', 'Streaks and gentle nudges (no dark patterns)', 3, 'medium', ['growth', 'ux']],
+  ['task', 'Accessibility audit of lesson player (WCAG 2.2 AA)', 5, 'high', ['a11y']],
+  ['bug', 'Contact link opens blank tab on Firefox', 1, 'low', ['polish']],
+  ['story', 'Classroom join codes', 5, 'medium', ['teachers']],
+  ['task', 'Cache knowledge graph JSON at the edge', 2, 'medium', ['perf']],
+  ['story', 'Learner can retake placement quiz', 2, 'low', ['onboarding']],
+  ['task', 'Document recommender API with OpenAPI', 2, 'low', ['docs', 'api']],
+  ['bug', 'Mastery glow too dim in light theme', 1, 'low', ['webgl', 'design-system']],
 ]
 
 const DECK_EPIC: EpicDef[] = [
@@ -450,7 +462,7 @@ export function buildSeed(): SeedData {
         s.committedPoints += iss.storyPoints ?? 0
         iss.fixVersionIds = ['v-02']
         const targets = ['done', 'done', 'done', 'done', 'done', 'qa', 'review', 'review', 'prog', 'prog', 'prog', 'todo', 'todo'] as const
-        progress(skb, iss, targets[idx] ?? 'todo', addDays(sStart, 0.5), subDays(today, rand() * 0.8))
+        progress(skb, iss, targets[idx] ?? 'todo', addDays(sStart, 0.5), targets[idx] === 'done' ? addDays(sStart, 1.2 + idx * 1.1 + rand() * 0.6) : subDays(today, rand() * 0.8))
         if (iss.statusId !== `${skb.key}-todo`) iss.timeSpent = Math.round((iss.originalEstimate ?? 240) * (0.3 + rand() * 0.8))
       } else if (s.state === 'future') {
         iss.fixVersionIds = s.order === 6 ? ['v-03'] : []

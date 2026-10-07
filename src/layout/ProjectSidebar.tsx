@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 import { useProjectByKey, useStore } from '@/store/store'
 import { cn } from '@/lib/utils'
 import { ProjectAvatar } from './TopNav'
+import { useProjectFeatures } from '@/features/settings/features'
 
 function Item({ to, icon, children, end }: { to: string; icon: ReactNode; children: ReactNode; end?: boolean }) {
   const collapsed = useStore((s) => s.sidebarCollapsed)
@@ -31,6 +32,7 @@ export function ProjectSidebar() {
   const project = useProjectByKey(projectKey)
   const collapsed = useStore((s) => s.sidebarCollapsed)
   const toggle = useStore((s) => s.toggleSidebar)
+  const [features] = useProjectFeatures(project?.id ?? '')
   if (!project) return null
   const base = `/projects/${project.key}`
   return (
@@ -47,10 +49,12 @@ export function ProjectSidebar() {
 
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2">
         {!collapsed && <div className="px-3 pt-2 pb-1.5 text-[11px] font-semibold tracking-wide text-subtle uppercase">Planning</div>}
-        <Item to={`${base}/timeline`} icon={<CalendarRange className="size-[18px]" />}>
-          Timeline
-        </Item>
-        {project.type === 'scrum' && (
+        {features.timeline && (
+          <Item to={`${base}/timeline`} icon={<CalendarRange className="size-[18px]" />}>
+            Timeline
+          </Item>
+        )}
+        {project.type === 'scrum' && features.sprints && (
           <Item to={`${base}/backlog`} icon={<ListTodo className="size-[18px]" />}>
             Backlog
           </Item>
@@ -58,16 +62,20 @@ export function ProjectSidebar() {
         <Item to={`${base}/board`} icon={<Columns3 className="size-[18px]" />}>
           {project.type === 'scrum' ? 'Active sprints' : 'Kanban board'}
         </Item>
-        <Item to={`${base}/reports`} icon={<BarChart3 className="size-[18px]" />}>
-          Reports
-        </Item>
+        {features.reports && (
+          <Item to={`${base}/reports`} icon={<BarChart3 className="size-[18px]" />}>
+            Reports
+          </Item>
+        )}
         <Item to={`${base}/issues`} icon={<Rows3 className="size-[18px]" />}>
           Issues
         </Item>
-        {!collapsed && <div className="px-3 pt-4 pb-1.5 text-[11px] font-semibold tracking-wide text-subtle uppercase">Development</div>}
-        <Item to={`${base}/releases`} icon={<Package className="size-[18px]" />}>
-          Releases
-        </Item>
+        {features.releases && !collapsed && <div className="px-3 pt-4 pb-1.5 text-[11px] font-semibold tracking-wide text-subtle uppercase">Development</div>}
+        {features.releases && (
+          <Item to={`${base}/releases`} icon={<Package className="size-[18px]" />}>
+            Releases
+          </Item>
+        )}
         <div className="flex-1" />
         <Item to={`${base}/settings`} icon={<Settings className="size-[18px]" />}>
           Project settings
