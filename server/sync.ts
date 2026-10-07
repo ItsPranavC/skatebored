@@ -56,7 +56,7 @@ export async function pull(req: Request) {
 
 // ───────────────────────────── push ─────────────────────────────
 
-function validate(body: unknown): Op[] {
+export function validate(body: unknown): Op[] {
   const ops = (body as { ops?: unknown })?.ops
   if (!Array.isArray(ops)) throw new HttpError(400, 'Expected { ops: [] }')
   if (ops.length > MAX_OPS) throw new HttpError(413, `Send at most ${MAX_OPS} changes per request`)
@@ -70,12 +70,17 @@ function validate(body: unknown): Op[] {
   return ops as Op[]
 }
 
-/** Applies a batch atomically. Writers are serialised by locking the workspace row. */
+/** POST /api/sync — authenticated wrapper around applyOps. */
 export async function push(req: Request) {
   const { userId } = await requireUser(req)
-  await ensureSchema()
   const ops = validate(await req.json().catch(() => null))
-  if (!ops.length) return json({ seq: null, corrections: [], missing: [] })
+  return json(await applyOps(ops, userId))
+}
+
+/** Applies a batch atomically. Writers are serialised by locking the workspace row. */
+export async function applyOps(ops: Op[], userId: string) {
+  await ensureSchema()
+  if (!ops.length) return { seq: null as number | null, corrections: [] as WireRecord[], missing: [] as { c: string; id: string }[] }
 
   const db = await pool().connect()
   const corrections: WireRecord[] = []
@@ -222,7 +227,7 @@ export async function push(req: Request) {
 
     await db.query('update sb_workspaces set seq = $2 where id = $1', [WORKSPACE_ID, v])
     await db.query('commit')
-    return json({ seq: v, corrections, missing })
+    return { seq: v as number | null, corrections, missing }
   } catch (e) {
     await db.query('rollback').catch(() => {})
     throw e

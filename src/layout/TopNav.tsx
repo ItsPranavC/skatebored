@@ -1,11 +1,11 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { ChevronDown, HelpCircle, LayoutDashboard, LogOut, Moon, Plus, RotateCcw, Search, Settings, Star, Sun, Users, Filter, FolderKanban, UserCog } from 'lucide-react'
+import { ChevronDown, HelpCircle, LayoutDashboard, LogOut, Moon, Plus, Search, Settings, Star, Sun, Users, Filter, FolderKanban, UserCog } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { useClerk } from '@clerk/react'
 import { useMe, useStore } from '@/store/store'
 import { useUI, toast } from '@/store/ui'
 import { Avatar, Logo } from '@/components/jira'
-import { Menu, Popover, ConfirmDialog } from '@/components/ui/overlay'
+import { Menu, Popover } from '@/components/ui/overlay'
 import { Button, Kbd } from '@/components/ui/primitives'
 import { NotificationsButton } from '@/features/notifications/NotificationsPanel'
 import { SyncIndicator } from '@/sync/SyncIndicator'
@@ -76,12 +76,10 @@ export function TopNav() {
   const theme = useStore((s) => s.theme)
   const setTheme = useStore((s) => s.setTheme)
   const clerk = useClerk()
-  const resetWorkspace = useStore((s) => s.resetWorkspace)
   const openCreate = useUI((s) => s.openCreate)
   const setSearchOpen = useUI((s) => s.setSearchOpen)
   const setShortcutsOpen = useUI((s) => s.setShortcutsOpen)
   const [createProject, setCreateProject] = useState(false)
-  const [confirmReset, setConfirmReset] = useState(false)
 
   const recentProjects = recent
     .filter((r) => r.kind === 'project')
@@ -214,7 +212,6 @@ export function TopNav() {
           { heading: true, label: 'Workspace' },
           { label: 'Projects', icon: <FolderKanban className="size-4" />, onClick: () => navigate('/projects') },
           { label: 'People & teams', icon: <Users className="size-4" />, onClick: () => navigate('/people') },
-          { label: 'Reset demo workspace', icon: <RotateCcw className="size-4" />, danger: true, onClick: () => setConfirmReset(true) },
         ]}
       />
       <Popover
@@ -268,19 +265,6 @@ export function TopNav() {
       </Popover>
 
       <CreateProjectModal open={createProject} onClose={() => setCreateProject(false)} />
-      <ConfirmDialog
-        open={confirmReset}
-        onClose={() => setConfirmReset(false)}
-        onConfirm={() => {
-          resetWorkspace()
-          navigate('/your-work')
-          toast({ title: 'Workspace reset to demo data', tone: 'success' })
-        }}
-        title="Reset the workspace for everyone?"
-        confirmLabel="Reset for everyone"
-      >
-        Every project, issue, sprint, comment and filter will be replaced with the original skatebored demo data — for the whole team, not just you. Deleted records stay recoverable in the database, but this is not something to click casually.
-      </ConfirmDialog>
     </header>
   )
 }

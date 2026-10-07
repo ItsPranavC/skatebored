@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import { buildSeed, type SeedData } from '@/data/seed'
+import type { SeedData } from '@/data/seed'
 import type {
   Attachment,
   BoardColumn,
@@ -49,7 +49,6 @@ export interface Actions {
   setTheme: (t: 'dark' | 'light') => void
   toggleSidebar: () => void
   pushRecent: (item: Omit<RecentItem, 'at'>) => void
-  resetWorkspace: () => void
 
   // users
   createUser: (u: Omit<User, 'id' | 'active'>) => User
@@ -163,9 +162,23 @@ const safeLocalStorage: Storage = {
   },
 }
 
+const emptyWorkspace = (): SeedData => ({
+  users: [],
+  projects: [],
+  sprints: [],
+  issues: [],
+  comments: [],
+  history: [],
+  worklogs: [],
+  notifications: [],
+  filters: [],
+  dashboards: [],
+})
+
 const initialState = (): State => ({
-  ...buildSeed(),
-  currentUserId: 'u1',
+  // The cloud is the source of truth: a fresh browser starts empty and loads the workspace on sign-in.
+  ...emptyWorkspace(),
+  currentUserId: '',
   theme: 'dark',
   recent: [],
   sidebarCollapsed: false,
@@ -256,7 +269,6 @@ export const useStore = create<Store>()(
           set((s) => ({
             recent: [{ ...item, at: nowISO() }, ...s.recent.filter((r) => !(r.kind === item.kind && r.id === item.id))].slice(0, 30),
           })),
-        resetWorkspace: () => set({ ...initialState(), theme: get().theme, syncCursor: get().syncCursor }),
 
         createUser: (u) => {
           const user: User = { ...u, id: uid('u'), active: true }

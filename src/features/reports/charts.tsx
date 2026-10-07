@@ -340,6 +340,11 @@ export function ControlChart({ project, days, height = 360, onPick }: { project:
     [d],
   )
   if (!d.pts.length) return <div className="grid h-40 place-items-center text-sm text-muted">No issues resolved in this period.</div>
+  // Pad the time axis: issues resolved moments apart would otherwise give a zero-width domain with duplicate ticks.
+  const ts = merged.map((m) => m.t)
+  const lo = Math.min(...ts)
+  const hi = Math.max(...ts)
+  const pad = Math.max((hi - lo) * 0.05, 12 * 3_600_000)
   return (
     <div>
       <LegendRow
@@ -353,7 +358,7 @@ export function ControlChart({ project, days, height = 360, onPick }: { project:
       <ResponsiveContainer width="100%" height={height}>
         <ComposedChart data={merged} margin={{ top: 8, right: 12, bottom: 0, left: -8 }}>
           <CartesianGrid vertical={false} stroke={th.grid} />
-          <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={fmtDay} {...axisProps(th)} minTickGap={24} />
+          <XAxis dataKey="t" type="number" scale="time" domain={[lo - pad, hi + pad]} tickFormatter={fmtDay} {...axisProps(th)} minTickGap={24} />
           <YAxis {...axisProps(th)} width={44} unit="d" />
           <ReferenceLine y={d.median} stroke={th.guide} strokeDasharray="5 4" />
           <Tooltip
