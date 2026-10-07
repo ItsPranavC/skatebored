@@ -1,0 +1,192 @@
+@import "tailwindcss";
+
+/*
+ * skatebored design tokens. Dark is the brand default (black canvas, cream ink,
+ * flame-red accent, deck-brown). Light is a warm paper variant of the same palette.
+ */
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+  --canvas: #000000;
+  --surface: #0b0907;
+  --surface-2: #141110;
+  --surface-3: #1e1916;
+  --surface-hover: rgb(244 218 200 / 0.06);
+  --surface-active: rgb(244 218 200 / 0.1);
+  --line: rgb(244 218 200 / 0.12);
+  --line-strong: rgb(244 218 200 / 0.24);
+  --fg: #f4dac8;
+  --muted: rgb(244 218 200 / 0.64);
+  --subtle: rgb(244 218 200 / 0.42);
+  --accent: #f04c4c;
+  --accent-hover: #f35d5d;
+  --accent-soft: rgb(240 76 76 / 0.14);
+  --ink: #160707;
+  --brown: #3d2412;
+  --todo: rgb(244 218 200 / 0.14);
+  --todo-fg: #f4dac8;
+  --progress: rgb(110 160 255 / 0.18);
+  --progress-fg: #9cbcff;
+  --done: rgb(92 196 126 / 0.18);
+  --done-fg: #7ddc9b;
+  --warn: #f2a93b;
+  --info: #6ea0ff;
+  --success: #5cc47e;
+  --shadow: 0 12px 40px -12px rgb(0 0 0 / 0.8), 0 0 0 1px rgb(244 218 200 / 0.1);
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  --canvas: #faf5f0;
+  --surface: #ffffff;
+  --surface-2: #f6efe9;
+  --surface-3: #eee4db;
+  --surface-hover: rgb(61 36 18 / 0.05);
+  --surface-active: rgb(61 36 18 / 0.09);
+  --line: rgb(61 36 18 / 0.13);
+  --line-strong: rgb(61 36 18 / 0.25);
+  --fg: #1f130b;
+  --muted: rgb(31 19 11 / 0.66);
+  --subtle: rgb(31 19 11 / 0.45);
+  --accent: #e03e3e;
+  --accent-hover: #c93434;
+  --accent-soft: rgb(224 62 62 / 0.1);
+  --ink: #ffffff;
+  --brown: #3d2412;
+  --todo: rgb(61 36 18 / 0.09);
+  --todo-fg: #3d2412;
+  --progress: rgb(40 100 220 / 0.12);
+  --progress-fg: #1f56c2;
+  --done: rgb(30 140 70 / 0.13);
+  --done-fg: #1b7a3e;
+  --warn: #c77a06;
+  --info: #2a64d6;
+  --success: #1f8a48;
+  --shadow: 0 12px 32px -12px rgb(61 36 18 / 0.35), 0 0 0 1px rgb(61 36 18 / 0.1);
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-hover: var(--surface-hover);
+  --color-active: var(--surface-active);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-ink: var(--ink);
+  --color-brown: var(--brown);
+  --color-todo: var(--todo);
+  --color-todo-fg: var(--todo-fg);
+  --color-progress: var(--progress);
+  --color-progress-fg: var(--progress-fg);
+  --color-done: var(--done);
+  --color-done-fg: var(--done-fg);
+  --color-warn: var(--warn);
+  --color-info: var(--info);
+  --color-success: var(--success);
+  --shadow-pop: var(--shadow);
+  --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--canvas);
+  color: var(--fg);
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Brand display type: heavy, tightly tracked, like the skatebored hero. */
+.display {
+  font-weight: 600;
+  letter-spacing: -0.045em;
+  line-height: 1.05;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+button {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+}
+
+/* Rich-text description / comment body */
+.prose-sb {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.prose-sb a {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.prose-sb code {
+  background: var(--surface-3);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 12.5px;
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-pop {
+  animation: pop-in 140ms ease-out;
+}
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(16px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.animate-slide {
+  animation: slide-in-right 160ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-pop,
+  .animate-slide {
+    animation: none;
+  }
+}
