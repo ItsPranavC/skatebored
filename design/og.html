@@ -1,0 +1,101 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  html, body { width: 1200px; height: 630px; overflow: hidden; }
+  body {
+    background: #000;
+    color: #f4dac8;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    position: relative;
+  }
+  /* soft flame glow + cream grain */
+  .glow { position: absolute; inset: 0;
+    background:
+      radial-gradient(620px 420px at 92% 108%, rgba(240,76,76,.30), transparent 70%),
+      radial-gradient(520px 360px at 70% -10%, rgba(61,36,18,.55), transparent 70%); }
+  .grid { position: absolute; inset: 0; opacity: .07;
+    background-image: linear-gradient(#f4dac8 1px, transparent 1px), linear-gradient(90deg, #f4dac8 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 80% 90% at 75% 50%, #000 30%, transparent 75%); }
+
+  .left { position: absolute; left: 72px; top: 64px; bottom: 60px; width: 600px; display: flex; flex-direction: column; }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand span { font-size: 30px; font-weight: 600; letter-spacing: -.045em; }
+  h1 { margin-top: auto; font-size: 84px; line-height: .98; font-weight: 600; letter-spacing: -.065em; }
+  h1 .red { color: #f04c4c; display: block; }
+  .sub { margin-top: 26px; font-size: 24px; line-height: 1.35; color: rgba(244,218,200,.66); letter-spacing: -.01em; max-width: 520px; }
+  .pill { margin-top: 30px; display: inline-flex; align-items: center; gap: 14px; height: 54px; padding: 0 7px 0 24px; border-radius: 999px;
+    background: #f04c4c; color: #160707; font-weight: 600; font-size: 20px; letter-spacing: -.01em; align-self: flex-start;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 14px 34px -14px rgba(240,76,76,.8); }
+  .pill i { font-style: normal; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: #160707; color: #f4dac8; }
+
+  /* board mock */
+  .board { position: absolute; left: 640px; top: 70px; width: 640px; transform: rotate(-6deg); transform-origin: top left; display: flex; gap: 14px; }
+  .col { width: 196px; background: rgba(20,17,16,.92); border: 1px solid rgba(244,218,200,.12); border-radius: 18px; padding: 14px; box-shadow: 0 30px 60px -20px rgba(0,0,0,.9); }
+  .col h3 { font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: rgba(244,218,200,.55); margin: 2px 4px 12px; display: flex; justify-content: space-between; }
+  .card { background: #1e1916; border: 1px solid rgba(244,218,200,.1); border-radius: 12px; padding: 12px 12px 10px; margin-bottom: 10px; }
+  .card p { font-size: 15px; line-height: 1.3; letter-spacing: -.01em; }
+  .meta { display: flex; align-items: center; gap: 7px; margin-top: 10px; font-size: 12px; color: rgba(244,218,200,.55); font-weight: 600; }
+  .tag { font-size: 10px; font-weight: 700; letter-spacing: .04em; padding: 3px 6px; border-radius: 5px; background: rgba(240,76,76,.2); color: #ff8f8f; }
+  .tag.blue { background: rgba(110,160,255,.2); color: #a9c4ff; }
+  .ico { width: 14px; height: 14px; border-radius: 3px; background: #4c9aff; display: inline-block; }
+  .ico.g { background: #5cc47e; }
+  .av { margin-left: auto; width: 20px; height: 20px; border-radius: 50%; background: #f2a93b; }
+  .done p { text-decoration: line-through; color: rgba(244,218,200,.5); }
+  .agent { position: absolute; left: 820px; top: 470px; transform: rotate(-6deg); display: flex; align-items: center; gap: 12px;
+    background: #141110; border: 1px solid rgba(244,218,200,.16); border-radius: 14px; padding: 12px 16px 12px 12px; box-shadow: 0 24px 50px -16px rgba(0,0,0,.95); }
+  .agent b { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: #1e1916; border: 1px solid rgba(244,218,200,.12); }
+  .agent span { font-size: 16px; font-weight: 600; letter-spacing: -.01em; }
+  .agent small { display: block; font-size: 12px; font-weight: 500; color: rgba(244,218,200,.55); }
+
+  /* deck silhouette echoing the skatebored hero board */
+  .deck { position: absolute; right: -40px; bottom: 6px; width: 520px; transform: rotate(-14deg); opacity: .9; }
+</style>
+</head>
+<body>
+  <div class="glow"></div>
+  <div class="grid"></div>
+
+  <div class="board">
+    <div class="col">
+      <h3>To do <span>2</span></h3>
+      <div class="card"><p>Set up system for collecting transcripts</p><div class="meta"><span class="ico"></span>SKB-4<span class="tag">T1</span><span class="av"></span></div></div>
+      <div class="card"><p>Integrate everything with Obsidian</p><div class="meta"><span class="ico"></span>SKB-7<span class="tag">T1</span></div></div>
+    </div>
+    <div class="col">
+      <h3>In progress <span>1</span></h3>
+      <div class="card" style="border-color: rgba(240,76,76,.55)"><p>Expose an agent/MCP server for the team</p><div class="meta"><span class="ico"></span>SKB-9<span class="tag">T1</span><span class="av" style="background:#6ea0ff"></span></div></div>
+      <div class="card"><p>Book three meetings with potential businesses</p><div class="meta"><span class="ico g"></span>SKB-16<span class="tag blue">T2</span></div></div>
+    </div>
+    <div class="col">
+      <h3>Done <span>✓</span></h3>
+      <div class="card done"><p>Streamline progress updates</p><div class="meta"><span class="ico"></span>SKB-5</div></div>
+      <div class="card done"><p>Better system to record goals</p><div class="meta"><span class="ico"></span>SKB-6</div></div>
+    </div>
+  </div>
+
+  <div class="agent">
+    <b><svg viewBox="0 0 24 24" width="20" height="20"><path clip-rule="evenodd" d="M20.998 10.949H24v3.102h-3v3.028h-1.487V20H18v-2.921h-1.487V20H15v-2.921H9V20H7.488v-2.921H6V20H4.487v-2.921H3V14.05H0V10.95h3V5h17.998v5.949zM6 10.949h1.488V8.102H6v2.847zm10.51 0H18V8.102h-1.49v2.847z" fill="#D97757" fill-rule="evenodd"/></svg></b>
+    <span>Open SKB-9 in your coding agent<small>Claude Code · Cursor · Codex · Copilot</small></span>
+  </div>
+
+  <svg class="deck" viewBox="0 0 400 140" aria-hidden="true">
+    <rect x="10" y="30" width="380" height="70" rx="35" fill="#f04c4c" opacity=".16"/>
+    <circle cx="90" cy="118" r="16" fill="#f4dac8" opacity=".12"/>
+    <circle cx="310" cy="118" r="16" fill="#f4dac8" opacity=".12"/>
+  </svg>
+
+  <div class="left">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" width="44" height="44"><rect width="32" height="32" rx="8" fill="#f04c4c"/><rect x="6" y="12.5" width="20" height="6" rx="3" fill="#160707"/><circle cx="10" cy="22" r="2.2" fill="#160707"/><circle cx="22" cy="22" r="2.2" fill="#160707"/></svg>
+      <span>skatebored</span>
+    </div>
+    <h1>plan the sprint.<span class="red">ship the trick.</span></h1>
+    <p class="sub">The skatebored team’s scrum workspace — boards, sprints, reports, and one-click hand-off to your coding agent.</p>
+    <div class="pill">Open the board <i>→</i></div>
+  </div>
+</body>
+</html>
