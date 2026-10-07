@@ -376,7 +376,8 @@ async function bootstrap() {
   const s = useStore.getState()
   const known = s.syncCursor != null && localStorage.getItem(SYNC_WS_KEY) === 'skatebored'
   if (known) {
-    await syncNow()
+    // Returning browser: show the cached workspace immediately and catch up in the background.
+    void syncNow()
     return
   }
   const { records, cursor, seq } = await pullAll(0)
