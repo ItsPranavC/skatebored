@@ -12,7 +12,7 @@ export function QuickCreate({
   projectId,
   defaults,
   variant = 'row',
-  label = 'Create issue',
+  label = 'Create',
   defaultType = 'story',
   allowEpic = false,
   onCreated,
