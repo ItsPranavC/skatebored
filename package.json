@@ -24,6 +24,7 @@
     "@vercel/functions": "^3.9.11",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
+    "exceljs": "4.4.0",
     "lucide-react": "^1.52.0",
     "mammoth": "1.12.3",
     "pg": "^8.23.1",

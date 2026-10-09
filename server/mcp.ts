@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { HttpError } from './auth.js'
 import { requireAgent, setCurrentIssue, type AgentRow } from './agents.js'
 import { waitUntil } from '@vercel/functions'
-import { docLine, docStats, docsConfigured, ensureFreshDocs, getDoc, listDocs, searchDocs } from './docs.js'
+import { docLine, docsOverview, docStats, docsConfigured, ensureFreshDocs, getDoc, listDocs, searchDocs } from './docs.js'
 import { addComment, issueLine, loadSnapshot, lookups, patchIssue, renderIssue, sortTasks, type Issue, type Lookups, type Project, type Snapshot } from './workspace.js'
 
 /**
@@ -453,6 +453,7 @@ export async function mcp(req: Request) {
   // Mirror the Drive knowledge base: awaited the first time, refreshed in the background after.
   await ensureFreshDocs(waitUntil).catch((e) => console.error('[docs]', e))
   const docs = docsConfigured() ? await docStats().catch(() => ({ files: 0, chars: 0 })) : { files: 0, chars: 0 }
+  const overview = docs.files ? await docsOverview().catch(() => '') : ''
   const intro = [
     `You are "${agent.name}", a coding agent working for ${o.name}${o.title ? ` (${o.title})` : ''} on the skatebored scrum workspace (${appUrl}).`,
     cur ? `Your current task is ${cur.key}: ${cur.summary}. Call get_current_task for the full brief before starting.` : `You have no current task yet. Call get_current_task to see ${o.name}'s open work, then start_task, or ask ${o.name}.`,
@@ -460,7 +461,8 @@ export async function mcp(req: Request) {
     `Everything you change is recorded as ${o.name}'s action and labelled with your agent name, so be accurate.`,
     ...(docs.files
       ? [
-          `The team's knowledge base (${docs.files} files from the shared Google Drive: product, plans, research, decisions) is available. Before making assumptions about the product, users, or past decisions, use search_docs, then get_doc to read what matters. list_docs shows everything.`,
+          `The team's knowledge base (${docs.files} files from the shared Google Drive: product, plans, research, decisions) is available. Before making assumptions about the product, users, or past decisions, read the relevant files with get_doc (pass the id below), or use search_docs to find passages.`,
+          ...(overview ? ['', '## Team knowledge base — what each file holds', overview] : []),
         ]
       : []),
   ].join('\n')

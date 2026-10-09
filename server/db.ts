@@ -99,6 +99,7 @@ export function ensureSchema() {
           primary key (workspace_id, id)
         );
         create index if not exists sb_docs_tsv on sb_docs using gin (tsv);
+        alter table sb_docs add column if not exists summary text;
         create table if not exists sb_doc_syncs (
           workspace_id text primary key references sb_workspaces(id),
           folder_id text not null,
