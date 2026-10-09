@@ -25,7 +25,7 @@ export async function calendarApi(req: Request) {
       }
       return json({ connected })
     }
-    if (view === 'members') return json({ connectedClerkIds: [...(await connectedMembers())] })
+    if (view === 'members') return json({ connectedClerkIds: [...(await connectedMembers()).keys()] })
     throw new HttpError(400, 'Unknown view')
   }
 

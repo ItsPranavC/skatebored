@@ -240,7 +240,7 @@ function ItemDetail({ item, onClose, onEdit }: { item: Item; onClose: () => void
               <Avatar user={creator} size="xs" /> Added by {creator.name}
             </div>
           )}
-          {!e && <p className="text-[12px] text-subtle">From the project’s sprint and release dates. Change it there.</p>}
+          {!e && <p className="text-[12px] text-subtle">From the project’s sprint and release dates; it’s on everyone’s Google Calendar as an all-day event. Change it on the project.</p>}
         </div>
       </Modal>
       <ConfirmDialog
@@ -287,7 +287,7 @@ function ConnectCard({ busy, onConnect }: { busy: boolean; onConnect: () => void
       </div>
       <div className="min-w-[220px] flex-1">
         <div className="font-semibold">Get team events on your Google Calendar</div>
-        <div className="text-[13px] text-muted">Every event on this calendar is added to yours automatically, and kept up to date. skatebored never reads your own events.</div>
+        <div className="text-[13px] text-muted">Team events, sprint dates and releases are added to yours automatically and kept up to date. skatebored never reads your own events.</div>
       </div>
       <Button variant="primary" size="md" disabled={busy} onClick={onConnect}>
         Connect Google Calendar
@@ -402,7 +402,7 @@ export default function CalendarPage() {
         }
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="max-w-[640px] text-sm text-muted">One calendar for the whole team: team events, sprint dates and releases. Every team event is copied to each member’s Google Calendar.</p>
+          <p className="max-w-[640px] text-sm text-muted">One calendar for the whole team: team events, sprint dates and releases. Everything on it is copied to each member’s Google Calendar.</p>
           <SyncCoverage />
         </div>
       </PageHeader>
