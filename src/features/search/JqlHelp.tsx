@@ -4,7 +4,7 @@ import { Kbd } from '@/components/ui/primitives'
 const FIELDS: [string, string][] = [
   ['project', 'Project key or name — project = SKB'],
   ['key', 'Issue key — key = SKB-12'],
-  ['type', 'Story, Task, Bug, Epic, Sub-task'],
+  ['type', 'Task, Bug, Epic, Sub-task'],
   ['status', 'Workflow status name — status = "In Review"'],
   ['statusCategory', '"To Do", "In Progress", Done'],
   ['priority', 'Highest, High, Medium, Low, Lowest (supports > and <)'],
@@ -35,7 +35,7 @@ const EXAMPLES: [string, string][] = [
   ['Unassigned high priority', 'assignee IS EMPTY AND priority >= High ORDER BY created DESC'],
   ['Resolved this week', 'resolved >= startOfWeek() ORDER BY resolved DESC'],
   ['WebGL or ML work', 'labels IN (webgl, ml) AND statusCategory != Done'],
-  ['Big stories without an epic', 'type = Story AND storyPoints >= 5 AND epic IS EMPTY'],
+  ['Big tasks without an epic', 'type = Task AND storyPoints >= 5 AND epic IS EMPTY'],
   ['Mentions “mastery”', 'text ~ "mastery" ORDER BY updated DESC'],
 ]
 

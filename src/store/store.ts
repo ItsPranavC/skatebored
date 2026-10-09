@@ -280,20 +280,12 @@ export const useStore = create<Store>()(
         // ─────────── projects ───────────
         createProject: (input) => {
           const key = input.key.toUpperCase()
-          const statuses: Status[] =
-            input.type === 'kanban'
-              ? [
-                  { id: `${key}-todo`, name: 'Backlog', category: 'todo' },
-                  { id: `${key}-sel`, name: 'Selected for Development', category: 'todo' },
-                  { id: `${key}-prog`, name: 'In Progress', category: 'inprogress' },
-                  { id: `${key}-done`, name: 'Done', category: 'done' },
-                ]
-              : [
-                  { id: `${key}-todo`, name: 'To Do', category: 'todo' },
-                  { id: `${key}-prog`, name: 'In Progress', category: 'inprogress' },
-                  { id: `${key}-review`, name: 'In Review', category: 'inprogress' },
-                  { id: `${key}-done`, name: 'Done', category: 'done' },
-                ]
+          const statuses: Status[] = [
+            { id: `${key}-todo`, name: 'To Do', category: 'todo' },
+            { id: `${key}-prog`, name: 'In Progress', category: 'inprogress' },
+            { id: `${key}-review`, name: 'In Review', category: 'inprogress' },
+            { id: `${key}-done`, name: 'Done', category: 'done' },
+          ]
           const project: Project = {
             id: uid('p-'),
             category: 'Software',
@@ -306,7 +298,7 @@ export const useStore = create<Store>()(
             versions: [],
             issueCounter: 0,
             starred: false,
-            estimation: input.type === 'kanban' ? 'count' : 'points',
+            estimation: 'points',
             createdAt: nowISO(),
             ...input,
             key,

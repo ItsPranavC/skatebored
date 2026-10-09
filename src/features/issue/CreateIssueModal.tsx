@@ -41,7 +41,7 @@ function CreateIssueForm({ defaults, onClose }: { defaults: Partial<Issue>; onCl
 
   const [projectId, setProjectId] = useState(initialProjectId)
   const project = projects.find((p) => p.id === projectId)
-  const [type, setType] = useState<IssueType>(parent ? 'subtask' : (defaults.type ?? 'story'))
+  const [type, setType] = useState<IssueType>(parent ? 'subtask' : (defaults.type ?? 'task'))
   const [statusId, setStatusId] = useState<string | null>(defaults.statusId ?? null)
   const [summary, setSummary] = useState(defaults.summary ?? '')
   const [description, setDescription] = useState(defaults.description ?? '')
@@ -92,7 +92,7 @@ function CreateIssueForm({ defaults, onClose }: { defaults: Partial<Issue>; onCl
       reporterId,
       priority,
       labels,
-      sprintId: type === 'epic' || project.type === 'kanban' ? null : parent ? parent.sprintId : sprintId,
+      sprintId: type === 'epic' ? null : parent ? parent.sprintId : sprintId,
       storyPoints: storyPoints === '' || type === 'subtask' ? null : Number(storyPoints),
       epicId: type === 'epic' ? null : epicId,
       parentId: parent?.id ?? null,

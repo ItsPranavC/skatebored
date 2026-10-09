@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react'
-import { Link, Navigate, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import {
   DndContext,
   DragOverlay,
@@ -34,7 +34,6 @@ const BACKLOG = 'backlog'
 export default function BacklogPage() {
   const { projectKey } = useParams()
   const project = useProjectByKey(projectKey)!
-  if (project.type === 'kanban') return <Navigate to={`/projects/${project.key}/board`} replace />
   return <Backlog key={project.id} project={project} />
 }
 

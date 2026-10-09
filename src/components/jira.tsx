@@ -71,7 +71,6 @@ export function AvatarGroup({ users, max = 5, size = 'md', selected = [], onTogg
 // ───────────────────────────── Issue type ─────────────────────────────
 
 const TYPE_STYLE: Record<IssueType, { bg: string; path: ReactNode }> = {
-  story: { bg: '#5cc47e', path: <path d="M5 3.5h6v9L8 10.5 5 12.5z" fill="#fff" /> },
   task: { bg: '#4c9aff', path: <path d="M4.8 8.2l2.1 2 4.3-4.4" stroke="#fff" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" /> },
   bug: { bg: '#f04c4c', path: <circle cx="8" cy="8" r="3" fill="#fff" /> },
   epic: { bg: '#b48cff', path: <path d="M9 3L5 9h3l-1 4 4-6H8z" fill="#fff" /> },
@@ -79,7 +78,8 @@ const TYPE_STYLE: Record<IssueType, { bg: string; path: ReactNode }> = {
 }
 
 export function IssueTypeIcon({ type, className }: { type: IssueType; className?: string }) {
-  const t = TYPE_STYLE[type]
+  // Retired types (e.g. old Stories) render as tasks.
+  const t = TYPE_STYLE[type] ?? TYPE_STYLE.task
   return (
     <Tooltip label={issueTypeLabel(type)}>
       <svg viewBox="0 0 16 16" className={cn('size-4 shrink-0', className)} aria-label={issueTypeLabel(type)}>

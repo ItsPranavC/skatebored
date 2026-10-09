@@ -13,7 +13,7 @@ export function QuickCreate({
   defaults,
   variant = 'row',
   label = 'Create',
-  defaultType = 'story',
+  defaultType = 'task',
   allowEpic = false,
   onCreated,
 }: {

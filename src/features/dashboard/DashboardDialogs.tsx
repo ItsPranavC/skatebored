@@ -168,7 +168,7 @@ export function ConfigureGadgetModal({ open, onClose, dashboardId, gadget }: { o
               onChange={(v) => setCfg((c) => (v === '__all' ? Object.fromEntries(Object.entries(c).filter(([k]) => k !== 'projectId')) : { ...c, projectId: v }))}
               options={[
                 ...(projectOptional ? [{ value: '__all', label: 'All projects' }] : []),
-                ...projects.map((p) => ({ value: p.id, label: `${p.name} (${p.key})`, hint: p.type === 'scrum' ? 'Scrum' : 'Kanban' })),
+                ...projects.map((p) => ({ value: p.id, label: `${p.name} (${p.key})`, hint: 'Scrum' })),
               ]}
             />
           </Field>

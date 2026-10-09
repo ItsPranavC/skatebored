@@ -11,6 +11,7 @@ import { IssueModalHost } from '@/features/issue/IssueDetailModal'
 import { CreateIssueModal } from '@/features/issue/CreateIssueModal'
 import { GlobalSearch } from '@/features/search/GlobalSearch'
 import { AgentLaunchHost } from '@/features/agents/OpenInAgent'
+import { Onboarding } from '@/features/onboarding/Onboarding'
 import { cn } from '@/lib/utils'
 
 const isTyping = (el: EventTarget | null) => {
@@ -56,8 +57,7 @@ function useGlobalShortcuts() {
         e.preventDefault()
         useUI.getState().setShortcutsOpen(true)
       } else if (projectKey && ['1', '2', '3', '4'].includes(k)) {
-        const p = useStore.getState().projects.find((x) => x.key === projectKey)
-        const routes = p?.type === 'kanban' ? ['board', 'reports', 'issues', 'timeline'] : ['backlog', 'board', 'reports', 'timeline']
+        const routes = ['backlog', 'board', 'reports', 'timeline']
         navigate(`/projects/${projectKey}/${routes[Number(k) - 1]}`)
       }
     }
@@ -154,6 +154,7 @@ export function AppLayout() {
       <IssueModalHost />
       <CreateIssueModal />
       <AgentLaunchHost />
+      <Onboarding />
       <GlobalSearch />
       <ShortcutsModal />
       <Toaster />

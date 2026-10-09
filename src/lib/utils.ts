@@ -77,7 +77,6 @@ export function initials(name: string) {
 }
 
 export const ISSUE_TYPES: { id: IssueType; label: string }[] = [
-  { id: 'story', label: 'Story' },
   { id: 'task', label: 'Task' },
   { id: 'bug', label: 'Bug' },
   { id: 'epic', label: 'Epic' },

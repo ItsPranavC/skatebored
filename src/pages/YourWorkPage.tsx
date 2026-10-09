@@ -136,7 +136,7 @@ export default function YourWorkPage() {
                   <ProjectAvatar project={p} size={36} />
                   <span className="min-w-0">
                     <span className="block truncate font-semibold tracking-[-0.01em] group-hover:text-accent">{p.name}</span>
-                    <span className="block text-xs text-muted">{p.type === 'scrum' ? 'Team-managed · Scrum' : 'Team-managed · Kanban'}</span>
+                    <span className="block text-xs text-muted">Team-managed · Scrum</span>
                   </span>
                 </Link>
                 <div className="mt-4 text-[11px] font-semibold tracking-wide text-subtle uppercase">Quick links</div>
@@ -149,7 +149,7 @@ export default function YourWorkPage() {
                   </Link>
                 </div>
                 <Link to={`/projects/${p.key}/board`} className="mt-3 block border-t border-line pt-2.5 text-[13px] text-muted hover:text-accent">
-                  {p.type === 'scrum' ? 'Active sprint board' : 'Kanban board'} →
+                  Active sprint board →
                 </Link>
               </div>
             )

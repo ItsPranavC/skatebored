@@ -13,7 +13,7 @@ A full Jira-style scrum workspace for the [skatebored](https://www.skatebored.or
 | **Reports** | Burndown, burnup, sprint report, velocity, cumulative flow, control chart, created vs resolved, pie charts, epic / version / time-tracking / workload reports |
 | **Dashboards** | Configurable 2-column gadget dashboards |
 | **Planning** | Timeline (roadmap Gantt with drag / resize), releases (versions), components |
-| **Admin** | Projects (scrum & kanban templates), board columns & statuses, WIP limits, members, people directory and profiles |
+| **Admin** | Projects (scrum template), board columns & statuses, WIP limits, members, people directory and profiles |
 | **Coding agents** | “Open in coding tool” on every ticket (Development panel, issue ⋯ menu, board/backlog right-click): packages the ticket — description, sub-tasks, links, epic, recent comments, branch & commit conventions — into a prompt for Claude Code, Cursor, Codex, VS Code, GitHub Copilot CLI, Rovo Dev CLI or Gemini CLI. Desktop tools open via deep link; terminal tools get a copy-ready command (Claude Code can also open a terminal directly). Prompts are trimmed to each tool's limit, with the full context kept on the clipboard / downloadable as `KEY.md`. |
 | **Auth** | Clerk sign-in / sign-up with branded pages; each Clerk account is matched to a workspace member by email (created on first sign-in) |
 | **Everywhere** | Notifications, global search (`/` or `⌘K`), keyboard shortcuts (`?`), recent items, account switcher for demoing different team members |
@@ -66,6 +66,33 @@ Modelled on Jira's "Open in coding tool". Deep-link formats used:
 | Gemini CLI | `gemini -i '…'` |
 
 Set the project's GitHub repo (shared) and your local clone path (per browser) in the launch dialog so agents start in the right folder. Nothing is ever sent automatically: every tool shows the prompt for review first.
+
+## Agent MCP server
+
+`/api/mcp` is a remote MCP server (Streamable HTTP) that connects coding agents to the workspace. Each teammate creates personal agent tokens under **Settings → Agents & MCP**; a token belongs to its creator, so the agent always knows **who its owner is** and acts as them (changes are recorded as the owner's, comments are signed with the agent's name).
+
+Every agent has one **current task** slot, filled by the owner (Agents page, or **Hand to agent** in any issue's Development panel) or by the agent itself (`start_task`). The server's instructions name the owner and current task at connect time.
+
+| Tool | What it does |
+| --- | --- |
+| `whoami` | Agent name, owner, current task, owner's projects |
+| `get_current_task` | Full brief: description, sprint + goal, epic, sub-tasks, links, recent comments, branch, workflow |
+| `list_my_tasks` | Owner's open issues (active sprint / all open / all), priority order |
+| `get_issue`, `search_issues` | Any issue by key; text + status/assignee/sprint/type filters |
+| `get_project_context` | Description, repo, workflow, active sprint progress, epics, team load |
+| `start_task` | Make an issue the current task (assigns unassigned work to the owner, moves To Do → In Progress; refuses teammates' issues) |
+| `update_task_status`, `add_comment` | Move through the workflow by status name; post progress |
+| `complete_task` | Post a summary, move to In Review, clear the slot |
+
+Connect Claude Code:
+
+```bash
+claude mcp add --transport http skatebored https://skateboredscrum.vercel.app/api/mcp --header "Authorization: Bearer sbk_…"
+```
+
+**Team knowledge base.** A shared Google Drive folder (`DRIVE_FOLDER_ID`) is mirrored into Postgres (`sb_docs`) as text — Docs as Markdown, Sheets as CSV (first sheet), Slides, PDFs and .docx as plain text — and served through `search_docs` (Postgres full-text search with snippets), `get_doc` (paged) and `list_docs`. Agents are told about it at connect time, and task briefs suggest related docs. The sync is incremental (by `modifiedTime`) and lazy: the first agent connection waits for it, after that a copy older than 10 minutes is refreshed in the background. Run it by hand with `npm run docs:sync` (`-- --force` to re-read everything). Access is a Google service account (`GOOGLE_SERVICE_ACCOUNT_JSON`, read-only Drive scope) that the folder is shared with; the Drive API must be enabled in its Google Cloud project. Code: `server/docs.ts`, `server/google.ts`.
+
+Tokens are stored only as SHA-256 hashes (`sb_agents` table) and can be revoked at any time. Code: `server/mcp.ts` (tools), `server/agents.ts` (tokens), `server/workspace.ts` (read model + writes through the sync engine). Test: `npm run test:mcp` (isolated throwaway workspace).
 
 ## Data & persistence
 

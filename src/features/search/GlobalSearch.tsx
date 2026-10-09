@@ -84,7 +84,7 @@ function Palette({ onClose }: { onClose: () => void }) {
           group: 'Recent boards & projects',
           icon: <ProjectAvatar project={p} size={20} />,
           label: `${p.name}`,
-          sub: `${p.key} · ${p.type === 'scrum' ? 'Scrum board' : 'Kanban board'}`,
+          sub: `${p.key} · Scrum board`,
           run: go(() => navigate(`/projects/${p.key}/board`)),
         }),
       )

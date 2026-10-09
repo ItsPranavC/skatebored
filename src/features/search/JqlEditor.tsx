@@ -102,7 +102,7 @@ export function JqlEditor({ value, onChange, onRun }: { value: string; onChange:
         return projects.map((p) => p.key)
       case 'type':
       case 'issuetype':
-        return ['Story', 'Task', 'Bug', 'Epic', 'Sub-task']
+        return ['Task', 'Bug', 'Epic', 'Sub-task']
       case 'status':
         return [...new Set(projects.flatMap((p) => p.statuses.map((s) => s.name)))]
       case 'statuscategory':

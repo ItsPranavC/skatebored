@@ -58,10 +58,9 @@ export default function BoardPage() {
   const [editOpen, setEditOpen] = useState(false)
   const navigate = useNavigate()
 
-  const isKanban = project.type === 'kanban'
   const daysLeft = sprint?.endDate ? differenceInCalendarDays(new Date(sprint.endDate), new Date()) : null
 
-  if (!isKanban && !sprint) {
+  if (!sprint) {
     const future = sprints.filter((s) => s.projectId === project.id && s.state === 'future')
     return (
       <div className="flex min-h-full flex-col">
@@ -86,58 +85,52 @@ export default function BoardPage() {
     <div className="flex h-full min-h-0 flex-col">
       <BoardHeader
         project={project}
-        title={isKanban ? `${project.key} board` : sprint!.name}
+        title={sprint.name}
         right={
-          !isKanban &&
-          sprint && (
-            <>
-              {activeSprints.length > 1 && (
-                <div className="w-48">
-                  <Select value={sprint.id} onChange={setSprintId} options={activeSprints.map((s) => ({ value: s.id, label: s.name }))} />
-                </div>
-              )}
-              {daysLeft != null && (
-                <Tooltip label={`${fmtDate(sprint.startDate)} – ${fmtDate(sprint.endDate)}`} side="bottom">
-                  <span className={cn('inline-flex items-center gap-1.5 text-[13px]', daysLeft < 0 ? 'text-accent' : 'text-muted')}>
-                    <Clock className="size-4" />
-                    {daysLeft < 0 ? `${-daysLeft} days overdue` : daysLeft === 0 ? 'Ends today' : `${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} remaining`}
-                  </span>
-                </Tooltip>
-              )}
-              <Button variant="default" onClick={() => setCompleteOpen(true)}>
-                Complete sprint
-              </Button>
-              <Menu
-                trigger={<Button variant="default" aria-label="Sprint actions" icon={<MoreHorizontal className="size-4" />} />}
-                items={[
-                  { label: 'Edit sprint', onClick: () => setEditOpen(true) },
-                  { label: 'Manage columns', icon: <Columns3 className="size-4" />, onClick: () => navigate(`/projects/${project.key}/settings/columns`) },
-                  { label: 'Go to backlog', onClick: () => navigate(`/projects/${project.key}/backlog`) },
-                  { label: 'Sprint reports', onClick: () => navigate(`/projects/${project.key}/reports`) },
-                ]}
-              />
-            </>
-          )
+          <>
+            {activeSprints.length > 1 && (
+              <div className="w-48">
+                <Select value={sprint.id} onChange={setSprintId} options={activeSprints.map((s) => ({ value: s.id, label: s.name }))} />
+              </div>
+            )}
+            {daysLeft != null && (
+              <Tooltip label={`${fmtDate(sprint.startDate)} – ${fmtDate(sprint.endDate)}`} side="bottom">
+                <span className={cn('inline-flex items-center gap-1.5 text-[13px]', daysLeft < 0 ? 'text-accent' : 'text-muted')}>
+                  <Clock className="size-4" />
+                  {daysLeft < 0 ? `${-daysLeft} days overdue` : daysLeft === 0 ? 'Ends today' : `${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} remaining`}
+                </span>
+              </Tooltip>
+            )}
+            <Button variant="default" onClick={() => setCompleteOpen(true)}>
+              Complete sprint
+            </Button>
+            <Menu
+              trigger={<Button variant="default" aria-label="Sprint actions" icon={<MoreHorizontal className="size-4" />} />}
+              items={[
+                { label: 'Edit sprint', onClick: () => setEditOpen(true) },
+                { label: 'Manage columns', icon: <Columns3 className="size-4" />, onClick: () => navigate(`/projects/${project.key}/settings/columns`) },
+                { label: 'Go to backlog', onClick: () => navigate(`/projects/${project.key}/backlog`) },
+                { label: 'Sprint reports', onClick: () => navigate(`/projects/${project.key}/reports`) },
+              ]}
+            />
+          </>
         }
       >
-        {!isKanban && sprint && (
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-muted">
-            {sprint.goal && (
-              <span className="inline-flex items-center gap-1.5">
-                <Target className="size-4 text-accent" />
-                <span className="text-fg">{sprint.goal}</span>
-              </span>
-            )}
-            {project.estimation === 'points' && (
-              <span>
-                {sumPoints(sprintIssues.filter((i) => doneIds.has(i.statusId)))} of {sumPoints(sprintIssues)} points done
-              </span>
-            )}
-          </div>
-        )}
-        {isKanban && <p className="mt-1.5 text-[13px] text-muted">Continuous flow · completed work stays visible for 14 days</p>}
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-muted">
+          {sprint.goal && (
+            <span className="inline-flex items-center gap-1.5">
+              <Target className="size-4 text-accent" />
+              <span className="text-fg">{sprint.goal}</span>
+            </span>
+          )}
+          {project.estimation === 'points' && (
+            <span>
+              {sumPoints(sprintIssues.filter((i) => doneIds.has(i.statusId)))} of {sumPoints(sprintIssues)} points done
+            </span>
+          )}
+        </div>
       </BoardHeader>
-      <Board key={`${project.id}:${sprint?.id ?? 'kanban'}`} project={project} sprint={sprint} />
+      <Board key={`${project.id}:${sprint.id}`} project={project} sprint={sprint} />
       <CompleteSprintModal sprint={sprint} open={completeOpen} onClose={() => setCompleteOpen(false)} />
       <EditSprintModal sprint={sprint} open={editOpen} onClose={() => setEditOpen(false)} />
     </div>
@@ -193,15 +186,7 @@ function Board({ project, sprint }: { project: Project; sprint: Sprint | null })
   const doneIds = useMemo(() => new Set(project.statuses.filter((s) => s.category === 'done').map((s) => s.id)), [project.statuses])
 
   // Everything that belongs on this board (pre-filter).
-  const boardIssues = useMemo(() => {
-    if (project.type === 'kanban') {
-      const cutoff = Date.now() - 14 * 864e5
-      return allIssues.filter(
-        (i) => i.projectId === project.id && i.type !== 'epic' && (!doneIds.has(i.statusId) || (i.resolvedAt && Date.parse(i.resolvedAt) >= cutoff)),
-      )
-    }
-    return allIssues.filter((i) => i.sprintId === sprint?.id && i.type !== 'epic')
-  }, [allIssues, project, sprint, doneIds])
+  const boardIssues = useMemo(() => allIssues.filter((i) => i.sprintId === sprint?.id && i.type !== 'epic'), [allIssues, sprint])
 
   const visible = useMemo(() => applyFilters(boardIssues, filters, me.id, allIssues).sort(byRank), [boardIssues, filters, me.id, allIssues])
 
@@ -566,7 +551,7 @@ function Board({ project, sprint }: { project: Project; sprint: Sprint | null })
                           <QuickCreate
                             variant="card"
                             projectId={project.id}
-                            defaultType={project.type === 'kanban' ? 'task' : 'story'}
+                            defaultType="task"
                             defaults={{
                               sprintId: sprint?.id ?? null,
                               statusId: c.statusIds[0],

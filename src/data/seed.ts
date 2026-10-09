@@ -82,16 +82,16 @@ const SKB_EPICS: EpicDef[] = [
       'Model each learner\'s mastery per concept and choose the next best lesson in real time.\n\nSuccess: 20% faster time-to-mastery vs. linear curriculum in the pilot cohort.',
     color: '#f04c4c',
     children: [
-      ['story', 'Bayesian knowledge tracing model for concept mastery', 8, 'highest', ['ml', 'core']],
-      ['story', 'Next-lesson recommender API endpoint', 5, 'high', ['api']],
+      ['task', 'Bayesian knowledge tracing model for concept mastery', 8, 'highest', ['ml', 'core']],
+      ['task', 'Next-lesson recommender API endpoint', 5, 'high', ['api']],
       ['task', 'Instrument lesson events into the learner event stream', 3, 'high', ['analytics']],
-      ['story', 'Spaced repetition scheduler for review cards', 5, 'medium', ['ml']],
+      ['task', 'Spaced repetition scheduler for review cards', 5, 'medium', ['ml']],
       ['bug', 'Mastery score resets after switching devices', 3, 'highest', ['sync']],
       ['task', 'Offline evaluation harness for recommender', 5, 'medium', ['ml']],
-      ['story', 'Difficulty calibration from first 3 answers', 3, 'medium', ['ml']],
+      ['task', 'Difficulty calibration from first 3 answers', 3, 'medium', ['ml']],
       ['bug', 'Recommender returns already-completed lesson', 2, 'high', ['api']],
       ['task', 'Feature store for learner signals', 8, 'medium', ['infra']],
-      ['story', 'Explainable "why this lesson" tooltip', 2, 'low', ['ux']],
+      ['task', 'Explainable "why this lesson" tooltip', 2, 'low', ['ux']],
     ],
   },
   {
@@ -100,13 +100,13 @@ const SKB_EPICS: EpicDef[] = [
       'The interactive orbitable knowledge volume on the demo page: concepts as nodes, prerequisites as edges, mastery as glow.',
     color: '#6ea0ff',
     children: [
-      ['story', 'Render concept graph as instanced spheres in three.js', 5, 'high', ['webgl']],
-      ['story', 'Orbit + zoom controls with inertia', 3, 'medium', ['webgl']],
+      ['task', 'Render concept graph as instanced spheres in three.js', 5, 'high', ['webgl']],
+      ['task', 'Orbit + zoom controls with inertia', 3, 'medium', ['webgl']],
       ['task', 'Level-of-detail for graphs > 2k nodes', 5, 'medium', ['perf', 'webgl']],
       ['bug', 'Knowledge volume flickers on Safari 18 when resizing', 2, 'high', ['webgl', 'safari']],
-      ['story', 'Highlight learning path when hovering a concept', 3, 'medium', ['webgl', 'ux']],
+      ['task', 'Highlight learning path when hovering a concept', 3, 'medium', ['webgl', 'ux']],
       ['task', 'Respect prefers-reduced-motion in knowledge volume', 1, 'low', ['a11y']],
-      ['story', 'Keyboard navigation between concept nodes', 3, 'medium', ['a11y']],
+      ['task', 'Keyboard navigation between concept nodes', 3, 'medium', ['a11y']],
     ],
   },
   {
@@ -114,11 +114,11 @@ const SKB_EPICS: EpicDef[] = [
     description: 'Typed hero intro, demo walkthrough and the first-session placement quiz.',
     color: '#5cc47e',
     children: [
-      ['story', 'Placement quiz: 8 adaptive questions', 5, 'high', ['onboarding']],
+      ['task', 'Placement quiz: 8 adaptive questions', 5, 'high', ['onboarding']],
       ['task', 'Typed.js hero copy variants for A/B test', 1, 'low', ['marketing']],
-      ['story', 'Demo button → spatial journey cross-fade', 3, 'medium', ['ux']],
+      ['task', 'Demo button → spatial journey cross-fade', 3, 'medium', ['ux']],
       ['bug', 'Demo button stays disabled when typed.js fails to load', 2, 'highest', ['onboarding']],
-      ['story', 'Save progress prompt after first lesson', 2, 'medium', ['growth']],
+      ['task', 'Save progress prompt after first lesson', 2, 'medium', ['growth']],
       ['task', 'Contact link → shared inbox routing', 1, 'low', []],
     ],
   },
@@ -127,11 +127,11 @@ const SKB_EPICS: EpicDef[] = [
     description: 'Replace the "Best on desktop" notice with a first-class phone & tablet experience.',
     color: '#f2a93b',
     children: [
-      ['story', 'Responsive layout for lesson player < 760px', 5, 'high', ['mobile']],
-      ['story', 'Touch gestures for skateboard model (pinch, rotate)', 3, 'medium', ['mobile', 'webgl']],
+      ['task', 'Responsive layout for lesson player < 760px', 5, 'high', ['mobile']],
+      ['task', 'Touch gestures for skateboard model (pinch, rotate)', 3, 'medium', ['mobile', 'webgl']],
       ['task', 'Audit safe-area insets on iOS', 1, 'low', ['mobile']],
       ['bug', 'Skateboard canvas captures vertical scroll on Android', 3, 'high', ['mobile', 'webgl']],
-      ['story', 'Remove device-notice gate behind feature flag', 2, 'medium', ['mobile']],
+      ['task', 'Remove device-notice gate behind feature flag', 2, 'medium', ['mobile']],
     ],
   },
   {
@@ -139,10 +139,10 @@ const SKB_EPICS: EpicDef[] = [
     description: 'Internal tool so the content team can author lessons, concepts and prerequisite links without engineering.',
     color: '#b48cff',
     children: [
-      ['story', 'Lesson editor with markdown + live preview', 8, 'medium', ['studio']],
-      ['story', 'Concept prerequisite graph editor', 5, 'medium', ['studio']],
+      ['task', 'Lesson editor with markdown + live preview', 8, 'medium', ['studio']],
+      ['task', 'Concept prerequisite graph editor', 5, 'medium', ['studio']],
       ['task', 'Role-based access for authors vs reviewers', 3, 'medium', ['auth']],
-      ['story', 'Publish workflow with review & approval', 5, 'low', ['studio']],
+      ['task', 'Publish workflow with review & approval', 5, 'low', ['studio']],
       ['task', 'Import legacy lessons from CSV', 2, 'low', ['studio', 'migration']],
     ],
   },
@@ -152,20 +152,20 @@ const SKB_LOOSE: [IssueType, string, number | null, Priority?, string[]?][] = [
   ['task', 'Upgrade three.js to r170', 2, 'medium', ['deps']],
   ['bug', 'Favicon missing on production (data: URI)', 1, 'low', ['polish']],
   ['task', 'Set up error monitoring for front end', 2, 'medium', ['infra']],
-  ['story', 'Dark/light theme tokens shared across apps', 3, 'low', ['design-system']],
+  ['task', 'Dark/light theme tokens shared across apps', 3, 'low', ['design-system']],
   ['task', 'Write ADR: event stream storage choice', 1, 'medium', ['docs']],
   ['bug', 'Typed cursor colour invisible on black background', 1, 'low', ['polish']],
   ['task', 'Load test recommender at 500 rps', 3, 'medium', ['perf']],
-  ['story', 'Teacher dashboard: class mastery heatmap', 8, 'high', ['teachers']],
-  ['story', 'Parent weekly progress email', 3, 'low', ['growth']],
+  ['task', 'Teacher dashboard: class mastery heatmap', 8, 'high', ['teachers']],
+  ['task', 'Parent weekly progress email', 3, 'low', ['growth']],
   ['bug', 'Lesson audio desyncs after pausing twice', 2, 'high', ['player']],
   ['task', 'GDPR data export for learner accounts', 3, 'high', ['privacy']],
-  ['story', 'Streaks and gentle nudges (no dark patterns)', 3, 'medium', ['growth', 'ux']],
+  ['task', 'Streaks and gentle nudges (no dark patterns)', 3, 'medium', ['growth', 'ux']],
   ['task', 'Accessibility audit of lesson player (WCAG 2.2 AA)', 5, 'high', ['a11y']],
   ['bug', 'Contact link opens blank tab on Firefox', 1, 'low', ['polish']],
-  ['story', 'Classroom join codes', 5, 'medium', ['teachers']],
+  ['task', 'Classroom join codes', 5, 'medium', ['teachers']],
   ['task', 'Cache knowledge graph JSON at the edge', 2, 'medium', ['perf']],
-  ['story', 'Learner can retake placement quiz', 2, 'low', ['onboarding']],
+  ['task', 'Learner can retake placement quiz', 2, 'low', ['onboarding']],
   ['task', 'Document recommender API with OpenAPI', 2, 'low', ['docs', 'api']],
   ['bug', 'Mastery glow too dim in light theme', 1, 'low', ['webgl', 'design-system']],
 ]
@@ -176,11 +176,11 @@ const DECK_EPIC: EpicDef[] = [
     description: 'The hero 3D skateboard: model, materials, interaction.',
     color: '#f04c4c',
     children: [
-      ['story', 'PBR materials for griptape and wood ply', 3, 'medium', ['3d']],
-      ['story', 'Drag to rotate, double-click to reset', 2, 'high', ['interaction']],
+      ['task', 'PBR materials for griptape and wood ply', 3, 'medium', ['3d']],
+      ['task', 'Drag to rotate, double-click to reset', 2, 'high', ['interaction']],
       ['task', 'Compress GLB with Draco (< 600KB)', 2, 'high', ['perf']],
       ['bug', 'Wheel spin stutters at 120Hz', 2, 'medium', ['3d']],
-      ['story', 'Idle float animation synced to typed cursor', 1, 'low', ['3d']],
+      ['task', 'Idle float animation synced to typed cursor', 1, 'low', ['3d']],
       ['task', 'Bake ambient occlusion for trucks', 3, 'low', ['3d']],
     ],
   },
@@ -189,11 +189,11 @@ const DECK_EPIC: EpicDef[] = [
     description: 'The iframe-hosted spatial stage that the demo cross-fades into.',
     color: '#38c6c6',
     children: [
-      ['story', 'Warm spatial iframe behind demo page', 3, 'high', ['perf']],
-      ['story', 'Camera path through 5 concept "rooms"', 5, 'medium', ['3d']],
+      ['task', 'Warm spatial iframe behind demo page', 3, 'high', ['perf']],
+      ['task', 'Camera path through 5 concept "rooms"', 5, 'medium', ['3d']],
       ['bug', 'Back button leaves iframe audio playing', 1, 'highest', ['bug-bash']],
       ['task', 'postMessage contract between host and spatial frame', 2, 'medium', ['api']],
-      ['story', 'Narration captions overlay', 3, 'medium', ['a11y']],
+      ['task', 'Narration captions overlay', 3, 'medium', ['a11y']],
     ],
   },
 ]
@@ -505,7 +505,7 @@ export function buildSeed(): SeedData {
   }
 
   // Sub-tasks for a couple of active stories
-  const activeStories = issues.filter((i) => i.sprintId === 's-skb-5' && i.type === 'story').slice(0, 3)
+  const activeStories = issues.filter((i) => i.sprintId === 's-skb-5' && i.type === 'task').slice(0, 3)
   for (const parent of activeStories) {
     const subs = ['Backend implementation', 'Front-end wiring', 'Tests & QA notes']
     subs.forEach((s, k) => {
@@ -593,13 +593,13 @@ export function buildSeed(): SeedData {
     })
   })
 
-  // ───────────────────────────── OPS (kanban) ─────────────────────────────
+  // ───────────────────────────── OPS ─────────────────────────────
   const ops = makeProject({
     id: 'p-ops',
     key: 'OPS',
     name: 'platform ops',
     description: 'Run-the-business: infrastructure, support escalations, pilot school operations.',
-    type: 'kanban',
+    type: 'scrum',
     category: 'Operations',
     leadId: 'u2',
     color: '#5cc47e',

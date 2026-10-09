@@ -1,5 +1,5 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { ChevronDown, HelpCircle, LayoutDashboard, LogOut, Moon, Plus, Search, Settings, Star, Sun, Users, Filter, FolderKanban, UserCog } from 'lucide-react'
+import { Bot, ChevronDown, HelpCircle, LayoutDashboard, LogOut, Moon, Plus, Search, Settings, Sun, Users, FolderKanban, UserCog } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { useClerk } from '@clerk/react'
 import { useMe, useStore } from '@/store/store'
@@ -11,6 +11,7 @@ import { NotificationsButton } from '@/features/notifications/NotificationsPanel
 import { SyncIndicator } from '@/sync/SyncIndicator'
 import { signOutCleanup } from '@/sync/engine'
 import { CreateProjectModal } from '@/features/project/CreateProjectModal'
+import { useOnboarding } from '@/features/onboarding/Onboarding'
 import { cn } from '@/lib/utils'
 
 function NavDropdown({ label, to, children }: { label: string; to: string; children: (close: () => void) => ReactNode }) {
@@ -71,7 +72,6 @@ export function TopNav() {
   const navigate = useNavigate()
   const projects = useStore((s) => s.projects)
   const recent = useStore((s) => s.recent)
-  const filters = useStore((s) => s.filters)
   const dashboards = useStore((s) => s.dashboards)
   const theme = useStore((s) => s.theme)
   const setTheme = useStore((s) => s.setTheme)
@@ -105,7 +105,7 @@ export function TopNav() {
                 <>
                   <DropHeading>Starred</DropHeading>
                   {starred.map((p) => (
-                    <DropLink key={p.id} to={`/projects/${p.key}/board`} onClick={close} icon={<ProjectAvatar project={p} />} sub={`${p.type === 'scrum' ? 'Scrum' : 'Kanban'} project`}>
+                    <DropLink key={p.id} to={`/projects/${p.key}/board`} onClick={close} icon={<ProjectAvatar project={p} />} sub="Scrum project">
                       {p.name} ({p.key})
                     </DropLink>
                   ))}
@@ -113,7 +113,7 @@ export function TopNav() {
               )}
               <DropHeading>Recent</DropHeading>
               {(recentProjects.length ? recentProjects : projects.slice(0, 3)).map((p) => (
-                <DropLink key={p.id} to={`/projects/${p.key}/board`} onClick={close} icon={<ProjectAvatar project={p} />} sub={`${p.type === 'scrum' ? 'Scrum' : 'Kanban'} project`}>
+                <DropLink key={p.id} to={`/projects/${p.key}/board`} onClick={close} icon={<ProjectAvatar project={p} />} sub="Scrum project">
                   {p.name} ({p.key})
                 </DropLink>
               ))}
@@ -133,27 +133,9 @@ export function TopNav() {
             </>
           )}
         </NavDropdown>
-        <NavDropdown label="Filters" to="/filters">
-          {(close) => (
-            <>
-              <DropHeading>Starred filters</DropHeading>
-              {filters
-                .filter((f) => f.starred)
-                .map((f) => (
-                  <DropLink key={f.id} to={`/issues?filter=${f.id}`} onClick={close} icon={<Star className="size-4 fill-warn text-warn" />}>
-                    {f.name}
-                  </DropLink>
-                ))}
-              <div className="my-2 h-px bg-line" />
-              <DropLink to="/issues" onClick={close} icon={<Search className="size-4 text-muted" />}>
-                Search issues (advanced)
-              </DropLink>
-              <DropLink to="/filters" onClick={close} icon={<Filter className="size-4 text-muted" />}>
-                View all filters
-              </DropLink>
-            </>
-          )}
-        </NavDropdown>
+        <NavLink to="/calendar" className={({ isActive }) => cn('flex h-8 items-center rounded-lg px-2.5 text-[14px] font-medium hover:bg-hover', isActive ? 'text-accent' : 'text-fg')}>
+          Calendar
+        </NavLink>
         <NavDropdown label="Dashboards" to="/dashboards">
           {(close) => (
             <>
@@ -197,6 +179,7 @@ export function TopNav() {
       <Menu
         trigger={<Button variant="ghost" aria-label="Help" icon={<HelpCircle className="size-[18px]" />} />}
         items={[
+          { label: 'Getting started', onClick: () => useOnboarding.getState().open() },
           { label: 'Keyboard shortcuts', shortcut: '?', onClick: () => setShortcutsOpen(true) },
           { label: 'JQL reference', onClick: () => navigate('/issues?help=jql') },
           { label: 'skatebored.org', onClick: () => window.open('https://www.skatebored.org/', '_blank', 'noopener') },
@@ -208,6 +191,7 @@ export function TopNav() {
         items={[
           { heading: true, label: 'Personal settings' },
           { label: theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme', icon: theme === 'dark' ? <Sun className="size-4" /> : <Moon className="size-4" />, onClick: () => setTheme(theme === 'dark' ? 'light' : 'dark') },
+          { label: 'Agents & MCP', icon: <Bot className="size-4" />, onClick: () => navigate('/agents') },
           { divider: true, label: '' },
           { heading: true, label: 'Workspace' },
           { label: 'Projects', icon: <FolderKanban className="size-4" />, onClick: () => navigate('/projects') },

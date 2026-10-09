@@ -42,7 +42,7 @@ export function ProjectSidebar() {
         {!collapsed && (
           <div className="min-w-0">
             <div className="truncate text-[15px] font-semibold tracking-[-0.02em]">{project.name}</div>
-            <div className="truncate text-xs text-muted">{project.type === 'scrum' ? 'Software project · Scrum' : 'Software project · Kanban'}</div>
+            <div className="truncate text-xs text-muted">Software project · Scrum</div>
           </div>
         )}
       </div>
@@ -54,13 +54,13 @@ export function ProjectSidebar() {
             Timeline
           </Item>
         )}
-        {project.type === 'scrum' && features.sprints && (
+        {features.sprints && (
           <Item to={`${base}/backlog`} icon={<ListTodo className="size-[18px]" />}>
             Backlog
           </Item>
         )}
         <Item to={`${base}/board`} icon={<Columns3 className="size-[18px]" />}>
-          {project.type === 'scrum' ? 'Active sprints' : 'Kanban board'}
+          Active sprints
         </Item>
         {features.reports && (
           <Item to={`${base}/reports`} icon={<BarChart3 className="size-[18px]" />}>

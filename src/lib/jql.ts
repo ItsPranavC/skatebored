@@ -1,7 +1,7 @@
 /**
  * A pragmatic JQL implementation.
  *
- *   project = SKB AND type in (Bug, Story) AND assignee = currentUser()
+ *   project = SKB AND type in (Bug, Task) AND assignee = currentUser()
  *   AND status != Done AND labels is not EMPTY AND created >= -14d
  *   AND summary ~ "mastery" ORDER BY priority DESC, created ASC
  *

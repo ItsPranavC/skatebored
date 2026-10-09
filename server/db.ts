@@ -56,6 +56,48 @@ export function ensureSchema() {
         );
         create index if not exists sb_records_version on sb_records (workspace_id, version);
         create index if not exists sb_records_issue_key on sb_records (workspace_id, (data->>'key')) where collection = 'issues';
+        create table if not exists sb_agents (
+          id text primary key,
+          workspace_id text not null references sb_workspaces(id),
+          owner_user_id text not null,
+          owner_clerk_id text not null,
+          name text not null,
+          token_hash text not null unique,
+          token_hint text not null,
+          current_issue_id text,
+          created_at timestamptz not null default now(),
+          last_used_at timestamptz,
+          revoked_at timestamptz
+        );
+        create index if not exists sb_agents_owner on sb_agents (workspace_id, owner_clerk_id);
+        create table if not exists sb_docs (
+          workspace_id text not null references sb_workspaces(id),
+          id text not null,
+          name text not null,
+          path text not null,
+          mime text not null,
+          url text,
+          modified_at timestamptz,
+          content text not null default '',
+          chars integer not null default 0,
+          note text,
+          deleted boolean not null default false,
+          synced_at timestamptz not null default now(),
+          tsv tsvector generated always as (
+            setweight(to_tsvector('english', coalesce(name, '') || ' ' || coalesce(path, '')), 'A') ||
+            setweight(to_tsvector('english', left(content, 900000)), 'B')
+          ) stored,
+          primary key (workspace_id, id)
+        );
+        create index if not exists sb_docs_tsv on sb_docs using gin (tsv);
+        create table if not exists sb_doc_syncs (
+          workspace_id text primary key references sb_workspaces(id),
+          folder_id text not null,
+          started_at timestamptz,
+          finished_at timestamptz,
+          error text,
+          files integer not null default 0
+        );
       `)
       await direct.query('insert into sb_workspaces (id) values ($1) on conflict (id) do nothing', [WORKSPACE_ID])
     } finally {

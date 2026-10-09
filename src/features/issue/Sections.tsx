@@ -212,7 +212,7 @@ export function ChildIssues({ issue, project, creating, setCreating }: { issue: 
   const isEpic = issue.type === 'epic'
   const children = issues.filter((i) => (isEpic ? i.epicId === issue.id && i.type !== 'subtask' : i.parentId === issue.id)).sort((a, b) => a.rank - b.rank)
   const [summary, setSummary] = useState('')
-  const [type, setType] = useState<IssueType>(isEpic ? 'story' : 'subtask')
+  const [type, setType] = useState<IssueType>(isEpic ? 'task' : 'subtask')
   if (issue.type === 'subtask') return null
   if (!children.length && !creating) return null
   const done = children.filter((c) => project.statuses.find((s) => s.id === c.statusId)?.category === 'done').length
@@ -254,7 +254,7 @@ export function ChildIssues({ issue, project, creating, setCreating }: { issue: 
                 onChange={setType}
                 width={160}
                 className="h-8 w-auto"
-                options={(['story', 'task', 'bug'] as IssueType[]).map((t) => ({ value: t, label: t[0]!.toUpperCase() + t.slice(1), icon: <IssueTypeIcon type={t} /> }))}
+                options={(['task', 'bug'] as IssueType[]).map((t) => ({ value: t, label: t[0]!.toUpperCase() + t.slice(1), icon: <IssueTypeIcon type={t} /> }))}
                 renderValue={(o) => (
                   <>
                     {o?.icon}

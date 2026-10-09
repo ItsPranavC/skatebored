@@ -1,15 +1,17 @@
 import { useEffect, useId, useMemo, useState } from 'react'
-import { Check, ChevronDown, Copy, Download, ExternalLink, FileText, FolderOpen, GitBranch, Monitor, SquareTerminal, Wand2 } from 'lucide-react'
+import { Bot, Check, ChevronDown, Copy, Download, ExternalLink, FileText, FolderOpen, GitBranch, Monitor, SquareTerminal, Wand2 } from 'lucide-react'
 import type { Issue, Project } from '@/types'
 import { useStore } from '@/store/store'
 import { toast } from '@/store/ui'
 import { cn, download } from '@/lib/utils'
-import { Modal, Popover, Tooltip } from '@/components/ui/overlay'
+import { Modal, Popover, Select, Tooltip } from '@/components/ui/overlay'
 import { Button, Checkbox, Field, Input, Textarea } from '@/components/ui/primitives'
 import { AGENTS, agentById, measure, type AgentDef, type LaunchTarget } from './agents'
 import { AGENT_SVGS } from './icons'
 import { branchName, buildIssueContext, fitPrompt } from './context'
 import { useAgentLaunch, useAgentPrefs } from './prefs'
+import { useMcpAgents } from './mcpAgents'
+import { Link } from 'react-router-dom'
 
 // ───────────────────────────── icon ─────────────────────────────
 
@@ -214,6 +216,7 @@ export function DevelopmentPanel({ issue }: { issue: Issue }) {
             <OpenInAgentButton issue={issue} />
             <p className="mt-1.5 text-[11px] leading-snug text-subtle">Hands the agent this ticket’s description, sub-tasks, links and discussion — nothing runs until you send it.</p>
           </div>
+          <HandToAgent issue={issue} />
           <div>
             <div className="mb-1.5 text-xs font-semibold text-muted">Branch</div>
             <div className="flex items-center gap-1.5 rounded-lg border border-line bg-surface-2 py-1 pr-1 pl-2.5">
@@ -238,6 +241,46 @@ export function DevelopmentPanel({ issue }: { issue: Issue }) {
             </div>
           </div>
         </div>
+      )}
+    </div>
+  )
+}
+
+/** Puts this issue in one of your MCP agents' "current task" slot. */
+function HandToAgent({ issue }: { issue: Issue }) {
+  const { agents, loaded, load, setTask } = useMcpAgents()
+  useEffect(() => {
+    if (!loaded) void load()
+  }, [loaded, load])
+  const holder = agents.find((a) => a.currentIssueId === issue.id)
+  return (
+    <div>
+      <div className="mb-1.5 text-xs font-semibold text-muted">Hand to agent</div>
+      {loaded && !agents.length ? (
+        <p className="text-[12px] text-subtle">
+          <Link to="/agents" className="text-accent hover:underline">
+            Connect an agent
+          </Link>{' '}
+          so it can pick this up over MCP with full context.
+        </p>
+      ) : (
+        <>
+          <Select
+            value={holder?.id ?? null}
+            placeholder="Choose one of your agents…"
+            options={agents.map((a) => ({ value: a.id, label: a.name, icon: <Bot className="size-4" />, hint: a.currentIssueId && a.currentIssueId !== issue.id ? 'busy' : undefined }))}
+            onChange={async (id) => {
+              const a = agents.find((x) => x.id === id)!
+              try {
+                await setTask(id, issue.id)
+                toast({ title: `${issue.key} handed to ${a.name}`, description: 'Tell it: “Work on my current skatebored task.”', tone: 'success' })
+              } catch (e) {
+                toast({ title: 'Couldn’t hand it over', description: (e as Error).message, tone: 'error' })
+              }
+            }}
+          />
+          <p className="mt-1.5 text-[11px] leading-snug text-subtle">{holder ? `${holder.name} is working on this.` : 'Becomes the agent’s current task in the skatebored MCP server.'}</p>
+        </>
       )}
     </div>
   )

@@ -20,6 +20,8 @@ const IssuesSearchPage = lazy(() => import('@/pages/IssuesSearchPage'))
 const FiltersPage = lazy(() => import('@/pages/FiltersPage'))
 const YourWorkPage = lazy(() => import('@/pages/YourWorkPage'))
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'))
+const AgentsPage = lazy(() => import('@/pages/AgentsPage'))
+const CalendarPage = lazy(() => import('@/pages/CalendarPage'))
 
 export default function App() {
   return (
@@ -45,6 +47,8 @@ export default function App() {
                   <Route path="filters" element={<FiltersPage />} />
                   <Route path="dashboards" element={<DashboardsPage />} />
                   <Route path="dashboards/:dashboardId" element={<DashboardPage />} />
+                  <Route path="agents" element={<AgentsPage />} />
+                  <Route path="calendar" element={<CalendarPage />} />
                   <Route path="people" element={<PeoplePage />} />
                   <Route path="people/:userId" element={<PeoplePage />} />
                   <Route path="browse/:issueKey" element={<IssuePage />} />

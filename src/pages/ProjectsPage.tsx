@@ -19,7 +19,6 @@ export default function ProjectsPage() {
   const toggleStar = useStore((s) => s.toggleStarProject)
   const deleteProject = useStore((s) => s.deleteProject)
   const [q, setQ] = useState('')
-  const [type, setType] = useState<'all' | 'scrum' | 'kanban'>('all')
   const [category, setCategory] = useState('all')
   const [creating, setCreating] = useState(false)
   const [trash, setTrash] = useState<Project | null>(null)
@@ -36,7 +35,7 @@ export default function ProjectsPage() {
   }, [projects, issues])
 
   const rows = projects
-    .filter((p) => (type === 'all' || p.type === type) && (category === 'all' || p.category === category))
+    .filter((p) => category === 'all' || p.category === category)
     .filter((p) => !q || `${p.name} ${p.key}`.toLowerCase().includes(q.toLowerCase()))
     .sort((a, b) => Number(b.starred) - Number(a.starred) || a.name.localeCompare(b.name))
 
@@ -55,16 +54,6 @@ export default function ProjectsPage() {
             <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-subtle" />
             <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search projects" className="pl-9" />
           </div>
-          <Select
-            className="w-44"
-            value={type}
-            onChange={setType}
-            options={[
-              { value: 'all', label: 'All project types' },
-              { value: 'scrum', label: 'Scrum' },
-              { value: 'kanban', label: 'Kanban' },
-            ]}
-          />
           <Select className="w-44" value={category} onChange={setCategory} options={[{ value: 'all', label: 'All categories' }, ...categories.map((c) => ({ value: c, label: c }))]} />
         </div>
       </PageHeader>
@@ -78,7 +67,6 @@ export default function ProjectsPage() {
               <Button
                 onClick={() => {
                   setQ('')
-                  setType('all')
                   setCategory('all')
                 }}
               >
@@ -121,7 +109,7 @@ export default function ProjectsPage() {
                         </Link>
                       </td>
                       <td className="px-3 py-2.5 font-semibold text-muted">{p.key}</td>
-                      <td className="px-3 py-2.5 text-muted">Team-managed software · {p.type === 'scrum' ? 'Scrum' : 'Kanban'}</td>
+                      <td className="px-3 py-2.5 text-muted">Team-managed software · Scrum</td>
                       <td className="px-3 py-2.5 text-muted">{p.category}</td>
                       <td className="px-3 py-2.5">
                         <span className="flex items-center gap-2">

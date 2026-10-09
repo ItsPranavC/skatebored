@@ -334,8 +334,7 @@ export function AccessTab({ project }: { project: Project }) {
 // ───────────────────────────── Issue types ─────────────────────────────
 
 const TYPE_DESC: Record<IssueType, string> = {
-  epic: 'A large body of work that can be broken down into stories, tasks and bugs.',
-  story: 'A user-facing feature or requirement, expressed from the learner’s perspective.',
+  epic: 'A large body of work that can be broken down into tasks and bugs.',
   task: 'A piece of work that needs to be done.',
   bug: 'A problem that impairs or prevents the functions of the product.',
   subtask: 'A smaller piece of work that’s part of a larger issue.',

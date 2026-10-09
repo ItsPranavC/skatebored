@@ -1,6 +1,6 @@
 export type ID = string
 
-export type IssueType = 'epic' | 'story' | 'task' | 'bug' | 'subtask'
+export type IssueType = 'epic' | 'task' | 'bug' | 'subtask'
 export type Priority = 'highest' | 'high' | 'medium' | 'low' | 'lowest'
 export type StatusCategory = 'todo' | 'inprogress' | 'done'
 
@@ -53,7 +53,7 @@ export interface Project {
   key: string
   name: string
   description: string
-  type: 'scrum' | 'kanban'
+  type: 'scrum'
   category: string
   leadId: ID
   color: string
