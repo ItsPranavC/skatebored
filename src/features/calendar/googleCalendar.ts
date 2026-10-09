@@ -1,20 +1,10 @@
 import { create } from 'zustand'
 import { authedFetch } from '@/sync/engine'
 
-/** Your Google Calendar, connected through Composio (server: server/calendar.ts). */
-export interface GCalEvent {
-  id: string
-  title: string
-  description: string
-  location: string
-  htmlLink: string | null
-  meetLink: string | null
-  allDay: boolean
-  start: string
-  end: string | null
-  attendees: number
-  response: 'accepted' | 'declined' | 'tentative' | 'needsAction' | null
-}
+/**
+ * Your Google Calendar connection (server: server/calendar.ts). It's write-only: the
+ * shared team calendar is copied into it, and nothing is ever read back out of it.
+ */
 
 export type ConnStatus = 'unknown' | 'connected' | 'disconnected' | 'unavailable'
 
@@ -23,33 +13,26 @@ const call = async (method: string, query = '', body?: unknown) =>
 
 interface CalState {
   status: ConnStatus
-  connectedAt: string | null
-  events: GCalEvent[]
-  range: { from: string; to: string } | null
-  syncedAt: string | null
-  syncing: boolean
+  /** Clerk ids of members whose Google Calendar receives the team calendar. */
+  connectedClerkIds: string[] | null
   error: string | null
   checkStatus: () => Promise<ConnStatus>
+  loadMembers: () => Promise<void>
   connect: () => Promise<void>
   disconnect: () => Promise<void>
-  sync: (from?: Date, to?: Date) => Promise<void>
-  /** `start` is local wall-clock time, e.g. 2026-10-09T09:00:00; sent with this browser's timezone. */
-  addEvent: (e: { title: string; description?: string; start: string; durationMinutes?: number }) => Promise<void>
+  /** Push the team calendar out to everyone's Google Calendar now. */
+  syncNow: () => Promise<{ created: number; updated: number; removed: number; failed: number }>
 }
 
 export const useGoogleCalendar = create<CalState>((set, get) => ({
   status: 'unknown',
-  connectedAt: null,
-  events: [],
-  range: null,
-  syncedAt: null,
-  syncing: false,
+  connectedClerkIds: null,
   error: null,
   checkStatus: async () => {
     try {
-      const r = (await call('GET', '?view=status')) as { connected: boolean; connectedAt: string | null }
+      const r = (await call('GET', '?view=status')) as { connected: boolean }
       const status: ConnStatus = r.connected ? 'connected' : 'disconnected'
-      set({ status, connectedAt: r.connectedAt, error: null })
+      set({ status, error: null })
       return status
     } catch (e) {
       // 503 = the server has no Composio keys yet; don't nag people about something they can't fix.
@@ -58,33 +41,24 @@ export const useGoogleCalendar = create<CalState>((set, get) => ({
       return status
     }
   },
+  loadMembers: async () => {
+    try {
+      const r = (await call('GET', '?view=members')) as { connectedClerkIds: string[] }
+      set({ connectedClerkIds: r.connectedClerkIds })
+    } catch {
+      /* coverage is informational only */
+    }
+  },
   connect: async () => {
     const { redirectUrl } = (await call('POST', '', { action: 'connect' })) as { redirectUrl: string }
     window.location.assign(redirectUrl)
   },
   disconnect: async () => {
     await call('DELETE')
-    set({ status: 'disconnected', connectedAt: null, events: [], syncedAt: null })
+    set({ status: 'disconnected' })
+    void get().loadMembers()
   },
-  sync: async (from, to) => {
-    const range = from && to ? { from: from.toISOString(), to: to.toISOString() } : get().range
-    if (!range || get().status !== 'connected') return
-    set({ syncing: true, range })
-    try {
-      const r = (await call('GET', `?from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}`)) as { events: GCalEvent[]; syncedAt: string }
-      // Ignore a slow response for a range the user has already navigated away from.
-      if (get().range?.from === range.from) set({ events: r.events, syncedAt: r.syncedAt, error: null })
-    } catch (e) {
-      if ((e as { status?: number }).status === 409) set({ status: 'disconnected' })
-      set({ error: (e as Error).message })
-    } finally {
-      set({ syncing: false })
-    }
-  },
-  addEvent: async (event) => {
-    await call('POST', '', { action: 'create', event: { ...event, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone } })
-    await get().sync()
-  },
+  syncNow: async () => call('POST', '', { action: 'sync' }),
 }))
 
 const DISMISS_KEY = (userId: string) => `sb:gcal-prompt-dismissed:${userId}`

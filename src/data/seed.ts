@@ -12,6 +12,7 @@ import type {
   Sprint,
   User,
   WorkLog,
+  TeamEvent,
 } from '@/types'
 
 /**
@@ -30,6 +31,7 @@ export interface SeedData {
   notifications: Notification[]
   filters: SavedFilter[]
   dashboards: Dashboard[]
+  events: TeamEvent[]
 }
 
 // Small deterministic PRNG so the seed is stable between resets.
@@ -690,5 +692,5 @@ export function buildSeed(): SeedData {
     },
   ]
 
-  return { users, projects, sprints, issues, comments, history, worklogs, notifications, filters, dashboards }
+  return { users, projects, sprints, issues, comments, history, worklogs, notifications, filters, dashboards, events: [] }
 }

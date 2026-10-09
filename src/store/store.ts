@@ -20,6 +20,7 @@ import type {
   Status,
   User,
   WorkLog,
+  TeamEvent,
 } from '@/types'
 import { EPIC_COLORS, nowISO, priorityLabel, issueTypeLabel, uid, fmtDate } from '@/lib/utils'
 
@@ -109,6 +110,11 @@ export interface Actions {
   addGadget: (dashboardId: ID, g: Omit<Gadget, 'id'>) => void
   updateGadget: (dashboardId: ID, gadgetId: ID, patch: Partial<Gadget>) => void
   removeGadget: (dashboardId: ID, gadgetId: ID) => void
+
+  // team calendar
+  createEvent: (input: Pick<TeamEvent, 'title' | 'start' | 'durationMinutes'> & Partial<Pick<TeamEvent, 'description' | 'location' | 'projectId'>>) => TeamEvent
+  updateEvent: (id: ID, patch: Partial<Pick<TeamEvent, 'title' | 'description' | 'location' | 'start' | 'durationMinutes' | 'projectId'>>) => void
+  deleteEvent: (id: ID) => void
 }
 
 export type Store = State & Actions
@@ -173,6 +179,7 @@ const emptyWorkspace = (): SeedData => ({
   notifications: [],
   filters: [],
   dashboards: [],
+  events: [],
 })
 
 const initialState = (): State => ({
@@ -719,6 +726,16 @@ export const useStore = create<Store>()(
         updateFilter: (id, patch) => set((s) => ({ filters: s.filters.map((f) => (f.id === id ? { ...f, ...patch } : f)) })),
         deleteFilter: (id) => set((s) => ({ filters: s.filters.filter((f) => f.id !== id) })),
 
+        // ─────────── team calendar ───────────
+        createEvent: (input) => {
+          const now = nowISO()
+          const e: TeamEvent = { description: '', location: '', projectId: null, ...input, id: uid('ev'), createdById: me(), createdAt: now, updatedAt: now }
+          set((s) => ({ events: [...s.events, e] }))
+          return e
+        },
+        updateEvent: (id, patch) => set((s) => ({ events: s.events.map((e) => (e.id === id ? { ...e, ...patch, updatedAt: nowISO() } : e)) })),
+        deleteEvent: (id) => set((s) => ({ events: s.events.filter((e) => e.id !== id) })),
+
         // ─────────── dashboards ───────────
         createDashboard: (name, description = '') => {
           const d: Dashboard = { id: uid('d'), name, description, ownerId: me(), starred: false, gadgets: [] }
@@ -749,7 +766,7 @@ export const useStore = create<Store>()(
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<State>
         const out = { ...current, ...p } as Store
-        for (const k of ['users', 'projects', 'sprints', 'issues', 'comments', 'history', 'worklogs', 'notifications', 'filters', 'dashboards', 'recent'] as const) {
+        for (const k of ['users', 'projects', 'sprints', 'issues', 'comments', 'history', 'worklogs', 'notifications', 'filters', 'dashboards', 'events', 'recent'] as const) {
           if (!Array.isArray(out[k])) (out as unknown as Record<string, unknown>)[k] = current[k]
         }
         return out

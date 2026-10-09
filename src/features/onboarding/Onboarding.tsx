@@ -158,16 +158,16 @@ export function Onboarding() {
     body = (
       <Hero icon={<CalendarDays className="size-6" />} title="Connect your Google Calendar">
         <ul className="mt-3 space-y-2">
-          <Perk>Your meetings next to your sprint work, on one calendar</Perk>
-          <Perk>New events show up here automatically</Perk>
-          <Perk>Turn any event into an issue, or put a due date on your Google Calendar</Perk>
+          <Perk>Team events (planning, reviews, demos) land on your Google Calendar automatically</Perk>
+          <Perk>Edits and cancellations follow, so you never hold a stale invite</Perk>
+          <Perk>skatebored only adds team events; it never reads your own calendar</Perk>
         </ul>
         {connected ? (
           <p className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-success/15 px-3 py-1 text-[13px] text-success">
             <Check className="size-4" /> Google Calendar connected
           </p>
         ) : (
-          <p className="mt-4 text-[12px] text-subtle">You’ll sign in with Google, then come straight back here. Only you can see your calendar.</p>
+          <p className="mt-4 text-[12px] text-subtle">You’ll sign in with Google, then come straight back here.</p>
         )}
       </Hero>
     )
@@ -258,7 +258,7 @@ export function Onboarding() {
           </Perk>
           {cal.status !== 'unavailable' && (
             <Perk>
-              Your meetings live in the <b>Calendar</b> tab{cal.status === 'connected' ? '' : ', where you can connect Google Calendar later'}.
+              The team’s schedule lives in the <b>Calendar</b> tab{cal.status === 'connected' ? '' : ', where you can connect Google Calendar later'}.
             </Perk>
           )}
           <Perk>

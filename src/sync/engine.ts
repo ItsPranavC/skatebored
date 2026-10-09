@@ -16,7 +16,7 @@ import { useStore, type State } from '@/store/store'
 import { buildSeed } from '@/data/seed'
 import { uid } from '@/lib/utils'
 
-export const SYNCED = ['users', 'projects', 'sprints', 'issues', 'comments', 'history', 'worklogs', 'notifications', 'filters', 'dashboards'] as const
+export const SYNCED = ['users', 'projects', 'sprints', 'issues', 'comments', 'history', 'worklogs', 'notifications', 'filters', 'dashboards', 'events'] as const
 export type Collection = (typeof SYNCED)[number]
 type Rec = { id: string } & Record<string, unknown>
 

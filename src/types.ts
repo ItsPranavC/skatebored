@@ -225,6 +225,21 @@ export interface Dashboard {
   gadgets: Gadget[]
 }
 
+/** An event on the shared team calendar. Relayed to every member who connected Google Calendar. */
+export interface TeamEvent {
+  id: ID
+  title: string
+  description: string
+  location: string
+  /** UTC ISO instant */
+  start: string
+  durationMinutes: number
+  projectId: ID | null
+  createdById: ID
+  createdAt: string
+  updatedAt: string
+}
+
 export interface RecentItem {
   kind: 'issue' | 'project' | 'board' | 'filter' | 'dashboard'
   id: ID

@@ -70,6 +70,15 @@ export function ensureSchema() {
           revoked_at timestamptz
         );
         create index if not exists sb_agents_owner on sb_agents (workspace_id, owner_clerk_id);
+        create table if not exists sb_calendar_relays (
+          workspace_id text not null references sb_workspaces(id),
+          event_id text not null,
+          clerk_id text not null,
+          google_event_id text not null,
+          content_hash text not null,
+          updated_at timestamptz not null default now(),
+          primary key (workspace_id, event_id, clerk_id)
+        );
         create table if not exists sb_docs (
           workspace_id text not null references sb_workspaces(id),
           id text not null,

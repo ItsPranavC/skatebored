@@ -1,8 +1,9 @@
 import { HttpError, json, requireUser } from './auth.js'
 import { ensureSchema, pool, WORKSPACE_ID } from './db.js'
+import { scheduleRelay } from './calendarRelay.js'
 
 /** Collections shared by the whole team. Per-person UI state (theme, recents…) never leaves the browser. */
-export const COLLECTIONS = ['users', 'projects', 'sprints', 'issues', 'comments', 'history', 'worklogs', 'notifications', 'filters', 'dashboards'] as const
+export const COLLECTIONS = ['users', 'projects', 'sprints', 'issues', 'comments', 'history', 'worklogs', 'notifications', 'filters', 'dashboards', 'events'] as const
 const COLLECTION_SET = new Set<string>(COLLECTIONS)
 
 /** Per-record ceiling. Attachments live in Blob storage, so real records are a few KB. */
@@ -227,6 +228,8 @@ export async function applyOps(ops: Op[], userId: string) {
 
     await db.query('update sb_workspaces set seq = $2 where id = $1', [WORKSPACE_ID, v])
     await db.query('commit')
+    // Team calendar changed: copy it to members' Google Calendars once the response is out.
+    if (ops.some((o) => o.c === 'events')) scheduleRelay()
     return { seq: v as number | null, corrections, missing }
   } catch (e) {
     await db.query('rollback').catch(() => {})
