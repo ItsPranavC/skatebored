@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "test:sync": "tsx --tsconfig tsconfig.node.json scripts/test-sync.ts",
     "test:mcp": "tsx --tsconfig tsconfig.node.json scripts/test-mcp.ts",
+    "test:meetings": "tsx --tsconfig tsconfig.node.json scripts/test-meetings.ts",
     "docs:sync": "tsx --tsconfig tsconfig.node.json scripts/sync-docs.ts"
   },
   "dependencies": {

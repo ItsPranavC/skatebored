@@ -13,6 +13,7 @@ import type {
   User,
   WorkLog,
   TeamEvent,
+  Meeting,
 } from '@/types'
 
 /**
@@ -32,6 +33,7 @@ export interface SeedData {
   filters: SavedFilter[]
   dashboards: Dashboard[]
   events: TeamEvent[]
+  meetings: Meeting[]
 }
 
 // Small deterministic PRNG so the seed is stable between resets.
@@ -692,5 +694,5 @@ export function buildSeed(): SeedData {
     },
   ]
 
-  return { users, projects, sprints, issues, comments, history, worklogs, notifications, filters, dashboards, events: [] }
+  return { users, projects, sprints, issues, comments, history, worklogs, notifications, filters, dashboards, events: [], meetings: [] }
 }

@@ -240,6 +240,45 @@ export interface TeamEvent {
   updatedAt: string
 }
 
+/** A task the AI pulled out of a meeting, waiting for someone to add it to a sprint (or dismiss it). */
+export interface SuggestedTask {
+  id: ID
+  summary: string
+  description: string
+  type: 'task' | 'bug'
+  priority: Priority
+  assigneeId: ID | null
+  /** Sprint the AI recommends; null = backlog */
+  sprintId: ID | null
+  storyPoints: number | null
+  /** Short quote or paraphrase from the transcript that motivated it */
+  rationale: string
+  /** Set once it has been turned into an issue */
+  issueId: ID | null
+  dismissed: boolean
+}
+
+/** One meeting in the team's history: its transcript (in Blob storage) and the AI's notes. */
+export interface Meeting {
+  id: ID
+  title: string
+  /** When the meeting happened (ISO) */
+  date: string
+  projectId: ID | null
+  createdById: ID
+  createdAt: string
+  transcriptPath: string
+  transcriptName: string
+  transcriptChars: number
+  summary: string
+  keyPoints: string[]
+  decisions: string[]
+  openQuestions: string[]
+  /** Names of people who spoke or were mentioned as present */
+  attendees: string[]
+  suggestions: SuggestedTask[]
+}
+
 export interface RecentItem {
   kind: 'issue' | 'project' | 'board' | 'filter' | 'dashboard'
   id: ID

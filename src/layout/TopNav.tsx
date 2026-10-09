@@ -136,6 +136,9 @@ export function TopNav() {
         <NavLink to="/calendar" className={({ isActive }) => cn('flex h-8 items-center rounded-lg px-2.5 text-[14px] font-medium hover:bg-hover', isActive ? 'text-accent' : 'text-fg')}>
           Calendar
         </NavLink>
+        <NavLink to="/meetings" className={({ isActive }) => cn('flex h-8 items-center rounded-lg px-2.5 text-[14px] font-medium hover:bg-hover', isActive ? 'text-accent' : 'text-fg')}>
+          Meetings
+        </NavLink>
         <NavDropdown label="Dashboards" to="/dashboards">
           {(close) => (
             <>

@@ -21,6 +21,7 @@ import type {
   User,
   WorkLog,
   TeamEvent,
+  Meeting,
 } from '@/types'
 import { EPIC_COLORS, nowISO, priorityLabel, issueTypeLabel, uid, fmtDate } from '@/lib/utils'
 
@@ -115,6 +116,10 @@ export interface Actions {
   createEvent: (input: Pick<TeamEvent, 'title' | 'start' | 'durationMinutes'> & Partial<Pick<TeamEvent, 'description' | 'location' | 'projectId'>>) => TeamEvent
   updateEvent: (id: ID, patch: Partial<Pick<TeamEvent, 'title' | 'description' | 'location' | 'start' | 'durationMinutes' | 'projectId'>>) => void
   deleteEvent: (id: ID) => void
+
+  // meetings (records are created by the server; the client edits suggestions)
+  updateMeeting: (id: ID, patch: Partial<Omit<Meeting, 'id'>>) => void
+  deleteMeeting: (id: ID) => void
 }
 
 export type Store = State & Actions
@@ -180,6 +185,7 @@ const emptyWorkspace = (): SeedData => ({
   filters: [],
   dashboards: [],
   events: [],
+  meetings: [],
 })
 
 const initialState = (): State => ({
@@ -736,6 +742,10 @@ export const useStore = create<Store>()(
         updateEvent: (id, patch) => set((s) => ({ events: s.events.map((e) => (e.id === id ? { ...e, ...patch, updatedAt: nowISO() } : e)) })),
         deleteEvent: (id) => set((s) => ({ events: s.events.filter((e) => e.id !== id) })),
 
+        // ─────────── meetings ───────────
+        updateMeeting: (id, patch) => set((s) => ({ meetings: s.meetings.map((m) => (m.id === id ? { ...m, ...patch } : m)) })),
+        deleteMeeting: (id) => set((s) => ({ meetings: s.meetings.filter((m) => m.id !== id) })),
+
         // ─────────── dashboards ───────────
         createDashboard: (name, description = '') => {
           const d: Dashboard = { id: uid('d'), name, description, ownerId: me(), starred: false, gadgets: [] }
@@ -766,7 +776,7 @@ export const useStore = create<Store>()(
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<State>
         const out = { ...current, ...p } as Store
-        for (const k of ['users', 'projects', 'sprints', 'issues', 'comments', 'history', 'worklogs', 'notifications', 'filters', 'dashboards', 'events', 'recent'] as const) {
+        for (const k of ['users', 'projects', 'sprints', 'issues', 'comments', 'history', 'worklogs', 'notifications', 'filters', 'dashboards', 'events', 'meetings', 'recent'] as const) {
           if (!Array.isArray(out[k])) (out as unknown as Record<string, unknown>)[k] = current[k]
         }
         return out
