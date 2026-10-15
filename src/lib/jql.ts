@@ -10,14 +10,17 @@
  * now(), startOfDay(), startOfWeek(), endOfDay()
  * Relative dates: -7d, -2w, 3d, -12h
  */
-import type { Issue, Project, Sprint, User } from '@/types'
+import type { Issue, Project, Sprint, User, WorkModule } from '@/types'
 import { priorityWeight } from '@/lib/utils'
+import { CATEGORY_LABEL, categoryOfWork, styleInfo } from '@/lib/work'
 
 export interface JqlContext {
   issues: Issue[]
   projects: Project[]
   sprints: Sprint[]
   users: User[]
+  /** Needed for `module = …`; without it module clauses match nothing. */
+  modules?: WorkModule[]
   currentUserId: string
 }
 
@@ -31,7 +34,7 @@ type Tok = { t: 'word' | 'str' | 'op' | 'lp' | 'rp' | 'comma'; v: string }
 export const JQL_FIELDS = [
   'project', 'key', 'type', 'status', 'statusCategory', 'priority', 'assignee', 'reporter', 'summary', 'description',
   'text', 'labels', 'sprint', 'epic', 'parent', 'component', 'fixVersion', 'storyPoints', 'created', 'updated',
-  'resolved', 'due', 'flagged', 'watcher',
+  'resolved', 'due', 'flagged', 'watcher', 'track', 'workStyle', 'workCategory', 'module',
 ] as const
 
 export const JQL_FUNCTIONS = ['currentUser()', 'openSprints()', 'closedSprints()', 'futureSprints()', 'now()', 'startOfDay()', 'startOfWeek()']
@@ -51,6 +54,8 @@ const FIELD_ALIASES: Record<string, string> = {
   'fix version': 'fixversion',
   label: 'labels',
   statuscategory: 'statuscategory',
+  'work style': 'workstyle',
+  'work category': 'workcategory',
 }
 
 function tokenize(src: string): Tok[] {
@@ -260,6 +265,7 @@ export function runJql(jql: string, ctx: JqlContext): JqlResult {
   }
   const projectOf = new Map(ctx.projects.map((p) => [p.id, p]))
   const byId = new Map(ctx.issues.map((i) => [i.id, i]))
+  const moduleOf = new Map((ctx.modules ?? []).map((m) => [m.id, m]))
   const userName = (id: string | null) => (id ? ctx.users.find((u) => u.id === id) : undefined)
 
   const resolveUserValue = (v: string): string[] => {
@@ -338,6 +344,21 @@ export function runJql(jql: string, ctx: JqlContext): JqlResult {
         return issue.dueDate ? [Date.parse(issue.dueDate)] : []
       case 'flagged':
         return issue.flagged ? ['impediment', 'true', 'yes'] : []
+      case 'track':
+        return issue.track ? [issue.track] : []
+      case 'workstyle': {
+        // id plus label, so "Direct implementation" / "Research-led" match too
+        const s = styleInfo(issue.workStyle)
+        return s ? [s.id, s.label.toLowerCase()] : []
+      }
+      case 'workcategory': {
+        const c = categoryOfWork(issue)
+        return c ? [c, CATEGORY_LABEL[c].toLowerCase()] : []
+      }
+      case 'module': {
+        const m = issue.moduleId ? moduleOf.get(issue.moduleId) : undefined
+        return m ? [m.id, m.name.toLowerCase()] : []
+      }
       default:
         return null
     }
@@ -360,6 +381,7 @@ export function runJql(jql: string, ctx: JqlContext): JqlResult {
       return [n]
     }
     if (field === 'type' && v.toLowerCase() === 'subtask') return ['sub-task']
+    if (field === 'workstyle') return [v.toLowerCase().trim().replace(/\s+led$/, '-led')]
     return [v.toLowerCase()]
   }
 

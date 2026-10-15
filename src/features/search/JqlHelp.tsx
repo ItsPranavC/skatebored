@@ -17,6 +17,10 @@ const FIELDS: [string, string][] = [
   ['storyPoints', 'Number — storyPoints >= 5'],
   ['created / updated / resolved / due', 'Date, relative (-7d, -2w) or startOfDay()'],
   ['flagged', 'flagged = Impediment'],
+  ['track', 'Operations, Technical — track IS EMPTY = unclassified'],
+  ['workStyle', 'Direct, Focused, Research (or "Direct implementation", "Focused investigation", Research-led)'],
+  ['workCategory', 'Research or Implementation (Technical work only)'],
+  ['module', 'Module name — module = "Embedder"'],
 ]
 
 const OPERATORS: [string, string][] = [

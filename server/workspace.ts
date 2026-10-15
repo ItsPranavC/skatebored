@@ -1,6 +1,20 @@
 import { randomBytes } from 'node:crypto'
 import { ensureSchema, pool, WORKSPACE_ID } from './db.js'
 import { applyOps, type Op } from './sync.js'
+import {
+  AUTHORING_LABEL,
+  ALL_TASK_FIELDS,
+  CANDIDATE_STATUS_LABEL,
+  CATEGORY_LABEL,
+  MODULE_SECTIONS,
+  OPERATIONS_FLOW,
+  REFERENCE_KIND_LABEL,
+  styleInfo,
+  taskGroups,
+  trackLabel,
+  type WorkStyle,
+  type WorkTrack,
+} from './work.js'
 
 /**
  * Server-side read model of the shared workspace, for the MCP server.
@@ -31,6 +45,8 @@ export interface Project {
   statuses: Status[]
   repo?: string | null
   estimation: 'points' | 'count'
+  defaultTrack?: WorkTrack | null
+  defaultWorkStyle?: WorkStyle | null
 }
 export interface Sprint {
   id: string
@@ -64,9 +80,44 @@ export interface Issue {
   links: { id: string; type: string; issueId: string }[]
   attachments: { name: string }[]
   flagged: boolean
+  track?: WorkTrack | null
+  workStyle?: WorkStyle | null
+  moduleId?: string | null
+  brief?: Record<string, string>
+  suggestions?: Record<string, BriefSuggestion>
+  references?: WorkReference[]
   createdAt: string
   updatedAt: string
   resolvedAt: string | null
+}
+export interface BriefSuggestion {
+  text: string
+  by: string
+  createdAt: string
+}
+export interface WorkReference {
+  id: string
+  title: string
+  location: string
+  kind: string
+  citation?: string
+  note?: string
+  question?: string
+  accessIssue?: string | null
+}
+export interface WorkModule {
+  id: string
+  projectId: string
+  name: string
+  summary: string
+  ownerId: string | null
+  defaultWorkStyle: WorkStyle | null
+  updatesLiveIn: string
+  brief: Record<string, string>
+  references: WorkReference[]
+  criteria: { id: string; name: string; kind: 'requirement' | 'preference'; threshold: string }[]
+  candidates: { id: string; name: string; baseline: boolean; status: string; reason: string }[]
+  tests: { id: string; question: string; result: string }[]
 }
 export interface Comment {
   id: string
@@ -81,6 +132,7 @@ export interface Snapshot {
   projects: Project[]
   sprints: Sprint[]
   issues: Issue[]
+  modules: WorkModule[]
 }
 
 /** Loads the collections the agent tools need (comments are fetched per issue). */
@@ -88,10 +140,10 @@ export async function loadSnapshot(): Promise<Snapshot> {
   await ensureSchema()
   const { rows } = await pool().query<{ collection: keyof Snapshot; data: never }>(
     `select collection, data from sb_records
-     where workspace_id = $1 and not deleted and collection in ('users', 'projects', 'sprints', 'issues')`,
+     where workspace_id = $1 and not deleted and collection in ('users', 'projects', 'sprints', 'issues', 'modules')`,
     [WORKSPACE_ID],
   )
-  const s: Snapshot = { users: [], projects: [], sprints: [], issues: [] }
+  const s: Snapshot = { users: [], projects: [], sprints: [], issues: [], modules: [] }
   for (const r of rows) s[r.collection].push(r.data)
   return s
 }
@@ -116,9 +168,10 @@ export function lookups(s: Snapshot) {
   const sprints = new Map(s.sprints.map((x) => [x.id, x]))
   const issues = new Map(s.issues.map((i) => [i.id, i]))
   const byKey = new Map(s.issues.map((i) => [i.key.toUpperCase(), i]))
+  const modules = new Map(s.modules.map((m) => [m.id, m]))
   const userName = (id: string | null | undefined) => (id ? (users.get(id)?.name ?? 'Unknown') : 'Unassigned')
   const status = (i: Issue) => projects.get(i.projectId)?.statuses.find((x) => x.id === i.statusId)
-  return { users, projects, sprints, issues, byKey, userName, status }
+  return { users, projects, sprints, issues, byKey, modules, userName, status }
 }
 export type Lookups = ReturnType<typeof lookups>
 
@@ -149,11 +202,108 @@ export function branchName(issue: Issue) {
 
 const day = (iso: string | null) => (iso ? iso.slice(0, 10) : '—')
 
+/** "Operations", "Technical/Research-led", or '' when unclassified — for compact lists. */
+export function workTypeShort(i: Pick<Issue, 'track' | 'workStyle'>) {
+  if (!i.track) return ''
+  const st = i.track === 'technical' ? styleInfo(i.workStyle) : undefined
+  return st ? `${trackLabel(i.track)}/${st.label}` : trackLabel(i.track)
+}
+
+/** "Technical · Research-led (Research heavy)", "Operations" or "Unclassified". */
+export function workTypeLong(i: Pick<Issue, 'track' | 'workStyle'>) {
+  if (i.track !== 'technical') return trackLabel(i.track)
+  const st = styleInfo(i.workStyle)
+  return st ? `Technical · ${st.label} (${CATEGORY_LABEL[st.category]})` : 'Technical · work style not chosen'
+}
+
 /** One line per issue, for lists. */
 export function issueLine(i: Issue, L: Lookups) {
   const pts = i.storyPoints != null ? ` · ${i.storyPoints} pts` : ''
   const sprint = i.sprintId ? L.sprints.get(i.sprintId)?.name : 'Backlog'
-  return `- ${i.key} [${L.status(i)?.name ?? '—'}] ${i.summary} (${i.type}, ${i.priority}${pts}, ${L.userName(i.assigneeId)}, ${sprint}${i.flagged ? ', FLAGGED' : ''})`
+  const work = workTypeShort(i)
+  return `- ${i.key} [${L.status(i)?.name ?? '—'}] ${i.summary} (${i.type}, ${i.priority}${pts}, ${L.userName(i.assigneeId)}, ${sprint}${work ? `, ${work}` : ''}${i.flagged ? ', FLAGGED' : ''})`
+}
+
+/** Multi-line text as an indented continuation of a list item. */
+const block = (t: string) => t.trim().replace(/\n/g, '\n  ')
+const filled = (v: string | undefined): v is string => !!v && v.trim().length > 0
+
+/** The task brief for the issue's current work style: every field, its authoring mode, and what's written. */
+export function renderTaskBrief(i: Issue): string[] {
+  const out: string[] = ['', '## Task brief', '']
+  const brief = i.brief ?? {}
+  const groups = taskGroups(i)
+  const st = i.track === 'technical' ? styleInfo(i.workStyle) : undefined
+  const flow = i.track === 'operations' ? OPERATIONS_FLOW : st
+  if (flow) out.push(`Expected flow: ${flow.flow.join(' → ')}`, `Required output: ${flow.output}`)
+  if (!groups.length) {
+    out.push(i.track === 'technical' ? 'No work style chosen yet, so there are no brief prompts. Ask your owner to pick one.' : 'Unclassified — no task brief. Your owner can classify it as Operations or Technical.')
+  } else {
+    out.push(
+      '[Handwrite] fields are written only by a person — never draft, fill or suggest text for them. [Use AI] fields may get a suggestion via suggest_brief_text; it is shown to the human next to their draft and never replaces it.',
+    )
+    if (i.track === 'operations') out.push('Operations work: no research prompts.')
+    for (const g of groups) {
+      out.push('', `### ${g.title}`, '')
+      for (const f of g.fields) {
+        out.push(`- ${f.label} [${AUTHORING_LABEL[f.authoring]}]: ${filled(brief[f.id]) ? block(brief[f.id]!) : '(empty)'}`)
+        const sug = i.suggestions?.[f.id]
+        if (sug) out.push(`  Pending suggestion from ${sug.by} (${sug.createdAt.slice(0, 10)}): ${block(sug.text)}`)
+      }
+    }
+  }
+  const current = new Set(groups.flatMap((g) => g.fields.map((f) => f.id)))
+  const earlier = Object.entries(brief).filter(([id, v]) => !current.has(id) && filled(v))
+  if (earlier.length) {
+    out.push('', '### Written under an earlier work style', '')
+    for (const [id, v] of earlier) out.push(`- ${ALL_TASK_FIELDS.get(id)?.label ?? id}: ${block(v)}`)
+  }
+  return out
+}
+
+function referenceLines(refs: WorkReference[] | undefined) {
+  return (refs ?? []).map(
+    (r) =>
+      `- ${r.title || '(untitled)'} (${REFERENCE_KIND_LABEL[r.kind] ?? r.kind}) — ${r.location || 'no location'}` +
+      (r.citation ? ` · ${r.citation}` : '') +
+      (r.question ? ` · Answers: ${r.question}` : '') +
+      (r.accessIssue ? ` · ACCESS ISSUE: ${r.accessIssue}` : ''),
+  )
+}
+
+export const moduleUrl = (m: WorkModule, L: Lookups, appUrl: string) => `${appUrl}/projects/${L.projects.get(m.projectId)?.key ?? m.projectId}/modules/${m.id}`
+
+/** A module brief: filled fields by section, references, comparison and decision. */
+export function renderModule(m: WorkModule, L: Lookups, appUrl: string, opts: { heading?: string; linkedTasks?: boolean } = {}) {
+  const out: string[] = [opts.heading ?? `# Module: ${m.name}`, '']
+  out.push(`Link: ${moduleUrl(m, L, appUrl)}`)
+  out.push(`Owner: ${L.userName(m.ownerId)}${m.defaultWorkStyle ? ` · New tasks start as ${styleInfo(m.defaultWorkStyle)?.label}` : ''}`)
+  if (m.updatesLiveIn?.trim()) out.push(`Updates live in: ${m.updatesLiveIn.trim()}`)
+  if (m.summary?.trim()) out.push('', m.summary.trim())
+  const brief = m.brief ?? {}
+  let any = false
+  for (const sec of MODULE_SECTIONS) {
+    const fields = sec.fields.filter((f) => filled(brief[f.id]))
+    if (!fields.length) continue
+    any = true
+    out.push('', `### ${sec.title}`, '')
+    for (const f of fields) out.push(`- ${f.label} [${AUTHORING_LABEL[f.authoring]}]: ${block(brief[f.id]!)}`)
+  }
+  if (!any) out.push('', '_The module brief is empty so far._')
+  if (m.references?.length) out.push('', '### References', '', ...referenceLines(m.references))
+  if (m.criteria?.length || m.candidates?.length) {
+    out.push('', '### Comparison', '')
+    if (m.criteria?.length) out.push(`Criteria: ${m.criteria.map((c) => `${c.name} (${c.kind}${c.threshold ? `: ${c.threshold}` : ''})`).join('; ')}`)
+    for (const c of m.candidates ?? [])
+      out.push(`- ${c.name}${c.baseline ? ' (current approach)' : ''} — ${CANDIDATE_STATUS_LABEL[c.status] ?? c.status}${c.reason ? `: ${c.reason.trim().replace(/\s+/g, ' ').slice(0, 300)}` : ''}`)
+  }
+  if (m.tests?.length) out.push('', `### Tests (${m.tests.length})`, '', ...m.tests.map((t) => `- ${t.question}${t.result ? ` → ${t.result.trim().replace(/\s+/g, ' ').slice(0, 300)}` : ' (no result yet)'}`))
+  if (!filled(brief.chosen)) out.push('', 'Decision: not recorded yet (the module owner records it).')
+  if (opts.linkedTasks) {
+    const tasks = sortTasks([...L.issues.values()].filter((i) => i.moduleId === m.id), L)
+    out.push('', `### Linked tasks (${tasks.length})`, '', ...(tasks.length ? tasks.map((i) => issueLine(i, L)) : ['- none']))
+  }
+  return out.join('\n')
 }
 
 /** The full brief an agent needs to work on one issue. */
@@ -176,6 +326,7 @@ export async function renderIssue(i: Issue, L: Lookups, appUrl: string, opts: { 
   )
   out.push(`Assignee: ${L.userName(i.assigneeId)} · Reporter: ${L.userName(i.reporterId)}`)
   out.push(`Project: ${p ? `${p.name} (${p.key})` : '—'}${p?.repo ? ` · Repo: https://github.com/${p.repo}` : ''}`)
+  out.push(`Work type: ${workTypeLong(i)}`)
   if (sprint) out.push(`Sprint: ${sprint.name} (${sprint.state}${sprint.endDate ? `, ends ${day(sprint.endDate)}` : ''})${sprint.goal ? ` · Goal: ${sprint.goal}` : ''}`)
   else out.push('Sprint: none (backlog)')
   if (i.dueDate) out.push(`Due: ${day(i.dueDate)}`)
@@ -183,6 +334,10 @@ export async function renderIssue(i: Issue, L: Lookups, appUrl: string, opts: { 
   out.push(`Suggested branch: ${branchName(i)} · Commit messages: start with "${i.key}: "`)
 
   out.push('', '## Description', '', i.description.trim() || '_No description. Ask your owner for acceptance criteria if anything is unclear._')
+  out.push(...renderTaskBrief(i))
+  if (i.references?.length) out.push('', '## References', '', ...referenceLines(i.references))
+  const mod = i.moduleId ? L.modules.get(i.moduleId) : undefined
+  if (mod) out.push('', renderModule(mod, L, appUrl, { heading: `## Module brief: ${mod.name}` }).replace(/^### /gm, '#### '))
 
   if (epic) out.push('', '## Epic', '', `${epic.key}: ${epic.summary}`, ...(epic.description.trim() ? ['', epic.description.trim().slice(0, 1500)] : []))
   if (parent) out.push('', '## Parent issue', '', `${parent.key}: ${parent.summary} [${L.status(parent)?.name ?? '—'}]`)
@@ -233,6 +388,13 @@ export async function patchIssue(i: Issue, patch: Partial<Pick<Issue, 'statusId'
   for (const o of ops) o.d!.id = o.id
   ops.unshift({ c: 'issues', id: i.id, op: 'patch', d })
   await applyOps(ops, actor.clerkId)
+  Object.assign(i, d)
+}
+
+/** Stores an agent's suggestion for a Use AI brief field. Never touches the brief itself. */
+export async function suggestBrief(i: Issue, field: string, suggestion: BriefSuggestion, actor: { clerkId: string }) {
+  const d = { suggestions: { ...(i.suggestions ?? {}), [field]: suggestion }, updatedAt: now() }
+  await applyOps([{ c: 'issues', id: i.id, op: 'patch', d }], actor.clerkId)
   Object.assign(i, d)
 }
 

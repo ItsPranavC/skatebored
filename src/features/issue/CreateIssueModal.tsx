@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { matchPath, useLocation, useNavigate } from 'react-router-dom'
-import type { Issue, IssueType, Priority } from '@/types'
+import type { Issue, IssueType, Priority, WorkStyle, WorkTrack } from '@/types'
 import { useStore } from '@/store/store'
 import { useUI, toast } from '@/store/ui'
 import { Avatar, IssueTypeIcon, issueTypeOptions, LabelTag, priorityOptions, StatusLozenge, useUserOptions } from '@/components/jira'
@@ -8,6 +8,8 @@ import { Modal, Select } from '@/components/ui/overlay'
 import { Button, Checkbox, Field, Input, Kbd } from '@/components/ui/primitives'
 import { ProjectAvatar } from '@/layout/TopNav'
 import { LabelEditor, MentionTextarea, fromDateInput, toDateInput } from './editors'
+import { TrackToggle, WorkStyleChooser } from '@/features/work/WorkUI'
+import { OPERATIONS_FIRST_PROMPT, isWorkView, styleInfo, viewDefaults } from '@/lib/work'
 
 export function CreateIssueModal() {
   const open = useUI((s) => s.createOpen)
@@ -54,6 +56,25 @@ function CreateIssueForm({ defaults, onClose }: { defaults: Partial<Issue>; onCl
   const [storyPoints, setStoryPoints] = useState(defaults.storyPoints?.toString() ?? '')
   const [epicId, setEpicId] = useState<string | null>(defaults.epicId ?? parent?.epicId ?? null)
   const [dueDate, setDueDate] = useState<string | null>(defaults.dueDate ?? null)
+  const modules = useStore((s) => s.modules)
+  // Creating from the Operations / Technical view of a board or backlog starts in that view.
+  const fromView = useMemo(() => {
+    const v = new URLSearchParams(location.search).get('work')
+    return projectId === initialProjectId && isWorkView(v) ? viewDefaults(v) : {}
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const [moduleId, setModuleId] = useState<string | null>(defaults.moduleId ?? parent?.moduleId ?? null)
+  const module = modules.find((m) => m.id === moduleId)
+  const [track, setTrack] = useState<WorkTrack | null>(
+    defaults.track !== undefined ? defaults.track : (parent?.track ?? (module ? 'technical' : (fromView.track ?? project?.defaultTrack ?? null))),
+  )
+  // null = not chosen yet; the default is pre-selected but stays visible as a choice
+  const [workStyle, setWorkStyle] = useState<WorkStyle | null>(
+    defaults.workStyle !== undefined ? defaults.workStyle : (parent?.workStyle ?? module?.defaultWorkStyle ?? fromView.workStyle ?? project?.defaultWorkStyle ?? null),
+  )
+  const [firstAnswer, setFirstAnswer] = useState('')
+  const style = track === 'technical' ? styleInfo(workStyle) : undefined
+  const firstField = track === 'operations' ? 'outcome' : style?.firstField
+  const firstPrompt = track === 'operations' ? OPERATIONS_FIRST_PROMPT : style?.firstPrompt
   const [another, setAnother] = useState(false)
   const [tried, setTried] = useState(false)
   const summaryRef = useRef<HTMLInputElement>(null)
@@ -72,7 +93,12 @@ function CreateIssueForm({ defaults, onClose }: { defaults: Partial<Issue>; onCl
     setStatusId(null)
     setSprintId(null)
     setEpicId(null)
+    setModuleId(null)
     const p = projects.find((x) => x.id === id)
+    if (p && defaults.track === undefined) {
+      setTrack(p.defaultTrack ?? null)
+      setWorkStyle(p.defaultWorkStyle ?? null)
+    }
     if (assigneeId && p && !p.memberIds.includes(assigneeId)) setAssigneeId(null)
   }
 
@@ -97,6 +123,10 @@ function CreateIssueForm({ defaults, onClose }: { defaults: Partial<Issue>; onCl
       epicId: type === 'epic' ? null : epicId,
       parentId: parent?.id ?? null,
       dueDate,
+      track,
+      workStyle: track === 'technical' ? workStyle : null,
+      moduleId: track === 'technical' ? moduleId : null,
+      brief: firstField && firstAnswer.trim() ? { [firstField]: firstAnswer.trim() } : {},
     })
     toast({
       title: `${issue.key} has been created`,
@@ -114,6 +144,7 @@ function CreateIssueForm({ defaults, onClose }: { defaults: Partial<Issue>; onCl
     if (another) {
       setSummary('')
       setDescription('')
+      setFirstAnswer('')
       setTried(false)
       summaryRef.current?.focus()
     } else onClose()
@@ -191,6 +222,41 @@ function CreateIssueForm({ defaults, onClose }: { defaults: Partial<Issue>; onCl
         <Field label="Summary" required error={summaryError}>
           <Input ref={summaryRef} autoFocus value={summary} onChange={(e) => setSummary(e.target.value)} invalid={!!summaryError} placeholder="What needs to be done?" />
         </Field>
+
+        {type !== 'epic' && (
+          <div className="space-y-3 rounded-xl border border-line px-4 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-muted">Work type</span>
+              <TrackToggle value={track} onChange={setTrack} />
+            </div>
+            {track === 'technical' && (
+              <div>
+                <div className="mb-1.5 text-[13px] font-semibold">How much investigation does this work need?</div>
+                <WorkStyleChooser value={workStyle} onChange={setWorkStyle} compact />
+              </div>
+            )}
+            {track === 'technical' && modules.some((m) => m.projectId === projectId) && (
+              <Field label="Module" hint="Optional — opens a shared brief with related tasks">
+                <Select
+                  value={moduleId ?? '__none'}
+                  onChange={(v) => {
+                    const id = v === '__none' ? null : v
+                    setModuleId(id)
+                    const m = modules.find((x) => x.id === id)
+                    if (m?.defaultWorkStyle && !workStyle) setWorkStyle(m.defaultWorkStyle)
+                  }}
+                  className={fieldBox}
+                  options={[{ value: '__none', label: 'None' }, ...modules.filter((m) => m.projectId === projectId).map((m) => ({ value: m.id, label: m.name }))]}
+                />
+              </Field>
+            )}
+            {firstPrompt && (
+              <Field label={firstPrompt} hint="Optional now — owner, dates and references can be added as the work becomes clearer.">
+                <MentionTextarea value={firstAnswer} onChange={setFirstAnswer} rows={2} placeholder="A rough answer is fine" />
+              </Field>
+            )}
+          </div>
+        )}
 
         <Field label="Description">
           <MentionTextarea value={description} onChange={setDescription} rows={5} placeholder="Add more detail. Supports **bold**, `code`, - lists and @mentions." />

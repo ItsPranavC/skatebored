@@ -80,7 +80,7 @@ export function Description({ issue }: { issue: Issue }) {
           }}
           className="-mx-2 cursor-text rounded-lg px-2 py-1.5 transition hover:bg-hover"
         >
-          {issue.description ? <RichText text={issue.description} /> : <p className="text-sm text-subtle">Add a description…</p>}
+          {issue.description ? <RichText text={issue.description} /> : <p className="text-sm text-subtle">{issue.type !== 'epic' && !issue.track ? 'Add expected outcome…' : 'Add a description…'}</p>}
         </div>
       )}
     </section>

@@ -82,6 +82,26 @@ try {
       issue('i2', 'TST-2', 'Build welcome screen', { assigneeId: 'u-me', priority: 'high' }),
       issue('i3', 'TST-3', 'Write onboarding email'),
       issue('i4', 'TST-4', 'Pick illustration style', { assigneeId: 'u-pat' }),
+      // Technical · Research-led, in a module, with a partly written brief
+      issue('i5', 'TST-5', 'Choose an embedder', {
+        sprintId: null,
+        track: 'technical',
+        workStyle: 'research',
+        moduleId: 'm1',
+        brief: { problem: 'Pick an embedder for question search.\nIt must run on-device.', acceptance: 'Old direct-style check' },
+        references: [{ id: 'r1', title: 'MiniLM paper', location: 'https://arxiv.org/abs/2002.10957', kind: 'paper', accessIssue: 'Paywalled copy only', addedById: 'u-me', addedAt: T }],
+      }),
+      issue('i6', 'TST-6', 'Book the skatepark', { sprintId: null, track: 'operations', brief: { outcome: 'Venue booked for June' } }),
+      {
+        c: 'modules', id: 'm1', op: 'put',
+        d: {
+          id: 'm1', projectId: 'p1', name: 'Embedder', summary: 'Which text embedder powers question search.', ownerId: 'u-me', defaultWorkStyle: 'research', updatesLiveIn: 'This brief',
+          brief: { problem: 'Search is keyword-only today.', formulation: 'cosine(q, d)', chosen: 'MiniLM', rationale: 'Small and fast enough' },
+          references: [], criteria: [{ id: 'k1', name: 'Latency', kind: 'requirement', threshold: '< 50 ms' }],
+          candidates: [{ id: 'x1', name: 'MiniLM', baseline: false, status: 'considering', reason: 'Small', advantages: '', disadvantages: '', cells: {} }],
+          tests: [], createdById: 'u-me', createdAt: T, updatedAt: T,
+        },
+      },
       { c: 'comments', id: 'c1', op: 'put', d: { id: 'c1', issueId: 'i2', authorId: 'u-pat', body: 'Use the cream palette please', createdAt: T, updatedAt: null } },
     ],
     user.id,
@@ -116,8 +136,9 @@ try {
   // ── identity & no task yet
   const c = await connect(token)
   const tools = (await c.listTools()).tools.map((t) => t.name)
-  ok(['whoami', 'get_current_task', 'list_my_tasks', 'get_issue', 'get_project_context', 'search_issues', 'start_task', 'update_task_status', 'add_comment', 'complete_task', 'search_docs', 'get_doc', 'list_docs'].every((t) => tools.includes(t)), `all tools listed (${tools.length})`)
+  ok(['whoami', 'get_current_task', 'list_my_tasks', 'get_issue', 'get_project_context', 'search_issues', 'start_task', 'update_task_status', 'add_comment', 'complete_task', 'search_docs', 'get_doc', 'list_docs', 'get_module_brief', 'suggest_brief_text'].every((t) => tools.includes(t)), `all tools listed (${tools.length})`)
   ok(/Riley Owner/.test(c.getInstructions() ?? ''), 'server instructions name the owner')
+  ok(/Never write into Handwrite fields/.test(c.getInstructions() ?? '') && /human judgments/.test(c.getInstructions() ?? ''), 'instructions carry the brief-authoring rules')
   const who = await call(c, 'whoami')
   ok(/Agent: Claude Code – laptop/.test(who.text) && /Owner: Riley Owner <riley@example.com>/.test(who.text), 'whoami → agent name + owner')
   const none = await call(c, 'get_current_task')
@@ -134,6 +155,8 @@ try {
 
   const proj = await call(c2, 'get_project_context')
   ok(/Active sprint: TST Sprint 1/.test(proj.text) && /Pat Teammate \(Designer\): 1 open issue/.test(proj.text), 'project context: sprint + team')
+  ok(/Open work by type: Operations 1 · Technical 1 \(research heavy 1, implementation heavy 0\) · Unclassified 3/.test(proj.text), 'project context: open work by type')
+  ok(/## Modules[\s\S]*- Embedder — owner: Riley Owner · 1 linked task/.test(proj.text), 'project context: modules with owner and linked tasks')
   const mine = await call(c2, 'list_my_tasks')
   ok(/TST-2.*← your current task/.test(mine.text) && !/TST-3/.test(mine.text), 'list_my_tasks marks the current task')
   const found = await call(c2, 'search_issues', { text: 'onboarding email', assignee: 'unassigned' })
@@ -159,6 +182,35 @@ try {
   ok((await call(c2, 'get_doc', { doc: 'nope-nothing' })).isError, 'unknown doc → error')
   const ld = await call(c2, 'list_docs', { folder: 'Product/' })
   ok(/1 file:/.test(ld.text) && /Welcome screen spec/.test(ld.text), 'list_docs filters by folder')
+
+  // ── work types, task briefs and modules
+  const t5 = await call(c2, 'get_issue', { key: 'TST-5' })
+  ok(/Work type: Technical · Research-led \(Research heavy\)/.test(t5.text), 'renderIssue shows the work type')
+  ok(/Expected flow: Frame → Research → Compare → Recommend → Implement and verify/.test(t5.text) && /Required output: Synthesis, justified choice and verification/.test(t5.text), 'brief shows the flow and required output')
+  ok(/- Problem and decision \[Handwrite\]: Pick an embedder for question search\.\n  It must run on-device\./.test(t5.text), 'filled Handwrite field shown with its label and authoring')
+  ok(/- Research questions \[Use AI\]: \(empty\)/.test(t5.text) && /- Synthesis \[Handwrite\]: \(empty\)/.test(t5.text), 'empty fields are listed with their authoring')
+  ok(/### Written under an earlier work style\n\n- Acceptance checks: Old direct-style check/.test(t5.text), 'text from an earlier work style stays visible')
+  ok(/## References[\s\S]*MiniLM paper \(Paper\) — https:\/\/arxiv\.org[\s\S]*ACCESS ISSUE: Paywalled copy only/.test(t5.text), 'references with kind, location and access issue')
+  ok(/## Module brief: Embedder[\s\S]*https:\/\/skatebored\.test\/projects\/TST\/modules\/m1[\s\S]*Technical definitions or formulation \[Use AI\]: cosine/.test(t5.text) && /#### Decision\n\n- Chosen approach \[Handwrite\]: MiniLM/.test(t5.text), 'module brief embedded with link and decision')
+  const t6 = await call(c2, 'get_issue', { key: 'TST-6' })
+  ok(/Work type: Operations/.test(t6.text) && /- Expected outcome \[Handwrite\]: Venue booked for June/.test(t6.text) && !/Research questions/.test(t6.text), 'Operations brief has no research prompts')
+  ok(/Work type: Unclassified/.test(task.text), 'unclassified issues say so')
+  ok(/TST-5 .*Technical\/Research-led/.test((await call(c2, 'search_issues', { text: 'embedder' })).text) && /TST-6 .*, Operations\)/.test((await call(c2, 'search_issues', { text: 'skatepark' })).text), 'issue lines carry the work type')
+  const mod = await call(c2, 'get_module_brief', { module: 'embedder' })
+  ok(/# Module: Embedder/.test(mod.text) && /Criteria: Latency \(requirement: < 50 ms\)/.test(mod.text) && /Linked tasks \(1\)[\s\S]*TST-5/.test(mod.text), 'get_module_brief by name')
+  ok((await call(c2, 'get_module_brief', { module: 'nope' })).isError, 'unknown module → error')
+
+  const hw = await call(c2, 'suggest_brief_text', { issue_key: 'TST-5', field: 'problem', text: 'Agent-written problem' })
+  ok(hw.isError && /Handwrite field/.test(hw.text), 'suggest_brief_text refuses a Handwrite field')
+  const other = await call(c2, 'suggest_brief_text', { issue_key: 'TST-5', field: 'acceptance', text: 'x' })
+  ok(other.isError && /not part of TST-5's work style/.test(other.text) && /questions \(Research questions\)/.test(other.text), 'suggest_brief_text refuses fields outside the work style')
+  ok((await call(c2, 'suggest_brief_text', { issue_key: 'TST-6', field: 'outcome', text: 'x' })).isError, 'Operations fields take no AI suggestions')
+  const sug = await call(c2, 'suggest_brief_text', { issue_key: 'TST-5', field: 'Research questions', text: 'Which embedder meets 50 ms on-device?' })
+  ok(!sug.isError && /Suggestion saved for "Research questions"/.test(sug.text), 'suggest_brief_text accepts a Use AI field')
+  const i5 = (await pool().query(`select data, updated_by from sb_records where workspace_id = $1 and collection = 'issues' and id = 'i5'`, [TEST_WS])).rows[0]
+  ok(i5.data.suggestions?.questions?.text === 'Which embedder meets 50 ms on-device?' && i5.data.suggestions.questions.by === "Claude Code – laptop (Riley's agent)" && i5.updated_by === user.id, 'DB: suggestion stored, labelled with agent and owner')
+  ok(Object.keys(i5.data.brief).length === 2 && i5.data.brief.problem === 'Pick an embedder for question search.\nIt must run on-device.' && i5.data.brief.acceptance === 'Old direct-style check', 'DB: brief untouched by the suggestion')
+  ok(/Research questions \[Use AI\]: \(empty\)\n  Pending suggestion from Claude Code – laptop \(Riley's agent\)/.test((await call(c2, 'get_issue', { key: 'TST-5' })).text), 'pending suggestion shown under the empty field')
 
   // ── writes
   const st = await call(c2, 'update_task_status', { status: 'in progress' })

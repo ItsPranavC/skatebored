@@ -5,7 +5,23 @@ import { HttpError } from './auth.js'
 import { requireAgent, setCurrentIssue, type AgentRow } from './agents.js'
 import { waitUntil } from '@vercel/functions'
 import { docLine, docsOverview, docStats, docsConfigured, ensureFreshDocs, getDoc, listDocs, searchDocs } from './docs.js'
-import { addComment, issueLine, loadSnapshot, lookups, patchIssue, renderIssue, sortTasks, type Issue, type Lookups, type Project, type Snapshot } from './workspace.js'
+import {
+  addComment,
+  issueLine,
+  loadSnapshot,
+  lookups,
+  patchIssue,
+  renderIssue,
+  renderModule,
+  sortTasks,
+  suggestBrief,
+  workTypeLong,
+  type Issue,
+  type Lookups,
+  type Project,
+  type Snapshot,
+} from './workspace.js'
+import { ALL_TASK_FIELDS, styleInfo, taskGroups } from './work.js'
 
 /**
  * skatebored MCP server (Streamable HTTP, stateless: one server per request).
@@ -156,7 +172,7 @@ function build(ctx: Ctx, intro: string) {
     'get_issue',
     {
       title: 'Get an issue',
-      description: 'Full context for any issue by key (e.g. SKB-12): description, epic, sub-tasks, links, comments and workflow.',
+      description: 'Full context for any issue by key (e.g. SKB-12): description, work type and task brief (with each field marked Use AI or Handwrite), references, module brief, epic, sub-tasks, links, comments and workflow.',
       inputSchema: { key: z.string().describe('Issue key, e.g. SKB-12') },
       annotations: { readOnlyHint: true },
     },
@@ -170,7 +186,7 @@ function build(ctx: Ctx, intro: string) {
     'get_project_context',
     {
       title: 'Get project context',
-      description: 'What the project is and where it stands: description, repo, workflow, active sprint goal and progress, epics, and the team (who owns what). Defaults to the project of your current task.',
+      description: 'What the project is and where it stands: description, repo, workflow, active sprint goal and progress, open work by type (Operations / Technical / Unclassified), modules, epics, and the team (who owns what). Defaults to the project of your current task.',
       inputSchema: { project: z.string().optional().describe('Project key, e.g. SKB') },
       annotations: { readOnlyHint: true },
     },
@@ -199,6 +215,23 @@ function build(ctx: Ctx, intro: string) {
       if (!active.length) out.push('', 'No active sprint.')
       const next = sprints.filter((s) => s.state === 'future').sort((a, b) => a.order - b.order)[0]
       if (next) out.push('', `Next sprint: ${next.name} (${issues.filter((i) => i.sprintId === next.id).length} issues planned)${next.goal ? ` · Goal: ${next.goal}` : ''}`)
+      const open = issues.filter((i) => cat(i) !== 'done' && i.type !== 'epic')
+      const n = (f: (i: Issue) => boolean) => open.filter(f).length
+      const tech = open.filter((i) => i.track === 'technical')
+      const techBy = (c: string) => tech.filter((i) => styleInfo(i.workStyle)?.category === c).length
+      const noStyle = tech.filter((i) => !styleInfo(i.workStyle)).length
+      out.push(
+        '',
+        `Open work by type: Operations ${n((i) => i.track === 'operations')} · Technical ${tech.length} (research heavy ${techBy('research')}, implementation heavy ${techBy('implementation')}${noStyle ? `, style not chosen ${noStyle}` : ''}) · Unclassified ${n((i) => !i.track)}`,
+      )
+      const mods = [...L.modules.values()].filter((m) => m.projectId === p.id)
+      if (mods.length) {
+        out.push('', '## Modules', '', 'Shared briefs for related tasks. Read one with get_module_brief.', '')
+        for (const m of mods) {
+          const linked = issues.filter((i) => i.moduleId === m.id).length
+          out.push(`- ${m.name} — owner: ${L.userName(m.ownerId)} · ${linked} linked task${linked === 1 ? '' : 's'}${m.summary?.trim() ? ` · ${m.summary.trim().replace(/\s+/g, ' ').slice(0, 160)}` : ''}`)
+        }
+      }
       const epics = issues.filter((i) => i.type === 'epic')
       if (epics.length) {
         out.push('', '## Epics', '')
@@ -349,6 +382,57 @@ function build(ctx: Ctx, intro: string) {
   )
 
   server.registerTool(
+    'get_module_brief',
+    {
+      title: 'Read a module brief',
+      description: 'A module is shared context for related tasks (e.g. "Embedder"): problem, research questions, synthesis, recommendation, decision, references, comparison and linked tasks. Pass the module name or id.',
+      inputSchema: { module: z.string().min(1).describe('Module name (case-insensitive) or id') },
+      annotations: { readOnlyHint: true },
+    },
+    guard(async ({ module }) => {
+      const { L } = await ctx.data()
+      const q = module.trim().toLowerCase()
+      const all = [...L.modules.values()]
+      const m = L.modules.get(module.trim()) ?? all.find((x) => x.name.toLowerCase() === q) ?? all.find((x) => x.name.toLowerCase().includes(q))
+      if (!m) return fail(`No module matches "${module}".${all.length ? ` Modules: ${all.map((x) => x.name).join(', ')}` : ' This workspace has no modules yet.'}`)
+      return text(renderModule(m, L, ctx.appUrl, { linkedTasks: true }))
+    }),
+  )
+
+  server.registerTool(
+    'suggest_brief_text',
+    {
+      title: 'Suggest text for a Use AI brief field',
+      description:
+        "Propose text for one task-brief field marked [Use AI] in get_issue. It is shown to the human as a suggestion next to their own draft — they accept, edit or reject it; it never replaces what they wrote. Handwrite fields are refused. Defaults to your current task.",
+      inputSchema: {
+        field: z.string().min(1).describe('Brief field id or label, e.g. "questions" or "Research questions"'),
+        text: z.string().min(1).max(8000),
+        issue_key: z.string().optional().describe('Issue key; omit for your current task'),
+      },
+    },
+    guard(async ({ field, text: body, issue_key }) => {
+      const { issue, L } = await target(issue_key)
+      const fields = taskGroups(issue).flatMap((g) => g.fields)
+      const q = field.trim().toLowerCase()
+      const f = fields.find((x) => x.id.toLowerCase() === q || x.label.toLowerCase() === q)
+      const style = workTypeLong(issue)
+      if (!f) {
+        const known = ALL_TASK_FIELDS.get(field.trim())?.label ?? [...ALL_TASK_FIELDS.values()].find((x) => x.label.toLowerCase() === q)?.label
+        const ai = fields.filter((x) => x.authoring === 'ai')
+        return fail(
+          `"${known ?? field}" is not part of ${issue.key}'s work style (${style}).` +
+            (ai.length ? ` Use AI fields you can suggest for: ${ai.map((x) => `${x.id} (${x.label})`).join(', ')}.` : ' This work style has no Use AI fields, so there is nothing to suggest.'),
+        )
+      }
+      if (f.authoring !== 'ai') return fail(`"${f.label}" is a Handwrite field on ${issue.key} (${style}). Only a person writes it — agents must not draft, fill or suggest text for it.`)
+      const o = ctx.owner(L)
+      await suggestBrief(issue, f.id, { text: body.trim(), by: `${ctx.agent.name} (${o.name.split(' ')[0]}'s agent)`, createdAt: new Date().toISOString() }, o)
+      return text(`Suggestion saved for "${f.label}" on ${issue.key}. ${o.name} sees it next to their draft and decides whether to use it; the brief itself is unchanged.`)
+    }),
+  )
+
+  server.registerTool(
     'search_docs',
     {
       title: 'Search team docs',
@@ -459,6 +543,7 @@ export async function mcp(req: Request) {
     cur ? `Your current task is ${cur.key}: ${cur.summary}. Call get_current_task for the full brief before starting.` : `You have no current task yet. Call get_current_task to see ${o.name}'s open work, then start_task, or ask ${o.name}.`,
     'Work only on your current task unless your owner says otherwise. Use get_project_context for the sprint goal and team. Post short progress comments with add_comment, and finish with complete_task (summary, how to verify, branch/PR).',
     `Everything you change is recorded as ${o.name}'s action and labelled with your agent name, so be accurate.`,
+    "Task briefs: issues are Operations or Technical work, and Technical work has a style (Direct implementation, Focused investigation, Research-led). get_issue marks each brief field [Use AI] or [Handwrite]. Never write into Handwrite fields. For Use AI fields you may propose text with suggest_brief_text; it is shown to the human as a suggestion and never replaces their draft. Never mark reading complete, verify claims, select an approach, approve work or declare validation — those are human judgments; report evidence in a comment instead. Operations tasks get no research prompts. Modules (get_module_brief) hold shared context for related tasks.",
     ...(docs.files
       ? [
           `The team's knowledge base (${docs.files} files from the shared Google Drive: product, plans, research, decisions) is available. Before making assumptions about the product, users, or past decisions, read the relevant files with get_doc (pass the id below), or use search_docs to find passages.`,

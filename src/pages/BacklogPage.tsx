@@ -27,6 +27,9 @@ import { ContextMenu, useContextMenu, useIssueMenu } from '@/features/board/issu
 import { QuickCreate } from '@/features/board/QuickCreate'
 import { multiContainerCollision } from '@/features/board/collision'
 import { CompleteSprintModal, EditSprintModal, StartSprintModal } from '@/features/backlog/SprintModals'
+import { WorkBadge, WorkViewSwitcher } from '@/features/work/WorkUI'
+import { useWorkView } from '@/features/work/hooks'
+import { inWorkView, viewDefaults } from '@/lib/work'
 
 const BACKLOG = 'backlog'
 
@@ -49,6 +52,7 @@ function Backlog({ project }: { project: Project }) {
   const { open: openIssue, selectedKey } = useIssueModal()
 
   const [filters, setFilters] = useState<IssueFilters>(EMPTY_FILTERS)
+  const [view, setView] = useWorkView(project.id)
   const [epicPanel, setEpicPanel] = usePersistentState(`sb.backlog.epics.${project.id}`, false)
   const [collapsed, setCollapsed] = usePersistentState<string[]>(`sb.backlog.collapsed.${project.id}`, [])
   const [selection, setSelection] = useState<string[]>([])
@@ -90,7 +94,10 @@ function Backlog({ project }: { project: Project }) {
     return m
   }, [allIssues, sprints, project.id, doneIds])
 
-  const visibleIn = useCallback((cid: string) => applyFilters(raw.get(cid) ?? [], filters, me.id, allIssues), [raw, filters, me.id, allIssues])
+  const visibleIn = useCallback(
+    (cid: string) => applyFilters((raw.get(cid) ?? []).filter((i) => inWorkView(i, view)), filters, me.id, allIssues),
+    [raw, filters, me.id, allIssues, view],
+  )
   const allVisible = useMemo(() => [...sprints.map((s) => s.id), BACKLOG].flatMap((cid) => visibleIn(cid)), [sprints, visibleIn])
   const filterIssues = useMemo(() => [...raw.values()].flat(), [raw])
 
@@ -214,7 +221,7 @@ function Backlog({ project }: { project: Project }) {
     )
   }
 
-  const filtered = hasActiveFilters(filters)
+  const filtered = hasActiveFilters(filters) || view !== 'all'
   const backlogRaw = raw.get(BACKLOG) ?? []
   const backlogVisible = visibleIn(BACKLOG)
 
@@ -232,7 +239,8 @@ function Backlog({ project }: { project: Project }) {
         </div>
         <h1 className="display text-[28px]">Backlog</h1>
       </div>
-      <div className="px-8 pb-4">
+      <div className="space-y-3 px-8 pb-4">
+        <WorkViewSwitcher view={view} onChange={setView} issues={filterIssues} />
         <FilterBar
           project={project}
           issues={filterIssues}
@@ -327,7 +335,7 @@ function Backlog({ project }: { project: Project }) {
                     </SortableContext>
                   )}
                   <div className="pt-1">
-                    <QuickCreate projectId={project.id} defaults={{ sprintId: sprint.id }} />
+                    <QuickCreate projectId={project.id} defaults={{ sprintId: sprint.id, ...viewDefaults(view) }} />
                   </div>
                 </Container>
               )
@@ -377,7 +385,7 @@ function Backlog({ project }: { project: Project }) {
                 </SortableContext>
               )}
               <div className="pt-1">
-                <QuickCreate projectId={project.id} defaults={{ sprintId: null }} />
+                <QuickCreate projectId={project.id} defaults={{ sprintId: null, ...viewDefaults(view) }} />
               </div>
             </Container>
 
@@ -540,6 +548,7 @@ function Row({ issue, project, epic, assignee, selected, dimmed, done, overlay, 
       <IssueTypeIcon type={issue.type} />
       <span className={cn('shrink-0 font-medium whitespace-nowrap text-muted', done && 'line-through')}>{issue.key}</span>
       <span className={cn('min-w-0 flex-1 truncate', done && 'text-muted')}>{issue.summary}</span>
+      <WorkBadge issue={issue} />
       {issue.flagged && <FlagIcon />}
       <span className="hidden max-w-[40%] shrink items-center gap-1 overflow-hidden lg:flex">
         {issue.labels.slice(0, 2).map((l) => (

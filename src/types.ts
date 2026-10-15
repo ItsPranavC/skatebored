@@ -69,6 +69,10 @@ export interface Project {
   repo?: string | null
   /** Board "estimation statistic" — story points or issue count. */
   estimation: 'points' | 'count'
+  /** Track new issues start in. Unset = new issues stay unclassified. */
+  defaultTrack?: WorkTrack | null
+  /** Work style new Technical issues start with (stamped at creation, never applied retroactively). */
+  defaultWorkStyle?: WorkStyle | null
   createdAt: string
 }
 
@@ -142,6 +146,17 @@ export interface Issue {
   links: IssueLink[]
   attachments: Attachment[]
   flagged: boolean
+  /** Operations or Technical. Unset = unclassified (still shown everywhere). */
+  track?: WorkTrack | null
+  /** How much investigation Technical work needs. */
+  workStyle?: WorkStyle | null
+  /** Shared module brief this issue opens, if any. */
+  moduleId?: ID | null
+  /** Task brief answers keyed by field id (see features/work/workStyles.ts). Kept when the work style changes. */
+  brief?: Record<string, string>
+  /** Suggestions for "Use AI" fields, shown next to the draft; never applied automatically. */
+  suggestions?: Record<string, BriefSuggestion>
+  references?: WorkReference[]
   createdAt: string
   updatedAt: string
   resolvedAt: string | null
@@ -283,4 +298,98 @@ export interface RecentItem {
   kind: 'issue' | 'project' | 'board' | 'filter' | 'dashboard'
   id: ID
   at: string
+}
+
+// ───────────────────────────── Operations / Technical work ─────────────────────────────
+
+export type WorkTrack = 'operations' | 'technical'
+/** direct + focused = Implementation heavy; research = Research heavy. */
+export type WorkStyle = 'direct' | 'focused' | 'research'
+
+export type ReferenceKind = 'doc' | 'paper' | 'obsidian' | 'web' | 'result' | 'other'
+
+/** A paper, document, Obsidian note, website or local result. The original stays where it lives. */
+export interface WorkReference {
+  id: ID
+  title: string
+  /** URL, Drive link, obsidian:// link or vault path */
+  location: string
+  kind: ReferenceKind
+  /** Optional citation details (authors, year, venue, paper id) */
+  citation?: string
+  /** Freeform note, or structured paper notes keyed by field id */
+  note?: string
+  notes?: Record<string, string>
+  /** Research question(s) this source helps answer */
+  question?: string
+  /** Set when the original can't be opened; the reference stays visible */
+  accessIssue?: string | null
+  addedById: ID
+  addedAt: string
+}
+
+export interface BriefSuggestion {
+  text: string
+  /** Who produced it, e.g. "Claude (Pranav's agent)" */
+  by: string
+  createdAt: string
+}
+
+export interface ComparisonCriterion {
+  id: ID
+  name: string
+  kind: 'requirement' | 'preference'
+  /** Pass condition for requirements; what "better" means for preferences */
+  threshold: string
+}
+
+export type CandidateStatus = 'considering' | 'needs-test' | 'deferred' | 'excluded' | 'not-evaluated'
+
+export interface ComparisonCandidate {
+  id: ID
+  name: string
+  /** Current approach / baseline */
+  baseline: boolean
+  status: CandidateStatus
+  reason: string
+  advantages: string
+  disadvantages: string
+  /** Per criterion: assessment + its basis. Missing = unknown. */
+  cells: Record<ID, { value: string; basis: string }>
+}
+
+export interface ModuleTest {
+  id: ID
+  question: string
+  baseline: string
+  conditions: string
+  checks: string
+  /** What outcome would change the recommendation */
+  wouldChange: string
+  result: string
+  interpretation: string
+  createdById: ID
+  createdAt: string
+}
+
+/** Optional shared context for related tasks (e.g. Embedder, Question Annotation). */
+export interface WorkModule {
+  id: ID
+  projectId: ID
+  name: string
+  summary: string
+  ownerId: ID | null
+  /** Work style tasks created in this module start with */
+  defaultWorkStyle: WorkStyle | null
+  /** Where members should make updates (this brief, or a linked doc) — avoids competing copies */
+  updatesLiveIn: string
+  brief: Record<string, string>
+  suggestions?: Record<string, BriefSuggestion>
+  references: WorkReference[]
+  criteria: ComparisonCriterion[]
+  candidates: ComparisonCandidate[]
+  tests: ModuleTest[]
+  createdById: ID
+  createdAt: string
+  updatedAt: string
 }

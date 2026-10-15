@@ -8,9 +8,10 @@ export function useJql(jql: string): JqlResult {
   const projects = useStore((s) => s.projects)
   const sprints = useStore((s) => s.sprints)
   const users = useStore((s) => s.users)
+  const modules = useStore((s) => s.modules)
   const currentUserId = useStore((s) => s.currentUserId)
   return useMemo(
-    () => runJql(jql, { issues, projects, sprints, users, currentUserId }),
-    [jql, issues, projects, sprints, users, currentUserId],
+    () => runJql(jql, { issues, projects, sprints, users, modules, currentUserId }),
+    [jql, issues, projects, sprints, users, modules, currentUserId],
   )
 }
