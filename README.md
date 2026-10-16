@@ -83,8 +83,6 @@ Every agent has one **current task** slot, filled by the owner (Agents page, or 
 | `start_task` | Make an issue the current task (assigns unassigned work to the owner, moves To Do → In Progress; refuses teammates' issues) |
 | `update_task_status`, `add_comment` | Move through the workflow by status name; post progress |
 | `complete_task` | Post a summary, move to In Review, clear the slot |
-| `get_module_brief` | A module's shared brief by name or id: filled fields, references, comparison, decision, linked tasks |
-| `suggest_brief_text` | Propose text for a Use AI brief field (shown to the human as a suggestion, never replaces their draft); Handwrite fields are refused |
 
 Connect Claude Code:
 

@@ -1,16 +1,13 @@
 import { useState, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
 import { Check, ChevronDown, Flag } from 'lucide-react'
-import type { Issue, Project, WorkStyle, WorkTrack } from '@/types'
+import type { Issue, Project } from '@/types'
 import { useStore } from '@/store/store'
 import { Avatar, EpicTag, IssueTypeIcon, LabelTag, priorityOptions, useUserOptions } from '@/components/jira'
 import { Popover, Select, SelectList, type Option } from '@/components/ui/overlay'
 import { Toggle } from '@/components/ui/primitives'
 import { cn, EPIC_COLORS, fmtDate, fmtDuration, parseDuration, timeAgo } from '@/lib/utils'
-import { CATEGORY_LABEL, WORK_COLOR, WORK_STYLES, styleLabel, trackLabel, workColor } from '@/lib/work'
 import { LabelEditor, fromDateInput, toDateInput } from './editors'
 import { TimeTrackingBar } from './LogWorkModal'
-import { moduleUrl } from '@/features/work/hooks'
 
 function Row({ label, children }: { label: ReactNode; children: ReactNode }) {
   return (
@@ -129,7 +126,6 @@ export function DetailsPanel({ issue, project, controls }: { issue: Issue; proje
   const me = useStore((s) => s.currentUserId)
   const sprints = useStore((s) => s.sprints)
   const issues = useStore((s) => s.issues)
-  const modules = useStore((s) => s.modules)
   const [open, setOpen] = useState(true)
   const [moreOpen, setMoreOpen] = useState(true)
   const set = (patch: Partial<Issue>) => update(issue.id, patch)
@@ -160,72 +156,6 @@ export function DetailsPanel({ issue, project, controls }: { issue: Issue; proje
         </button>
         {open && (
           <div className="border-t border-line px-4 py-2">
-            {!isEpic && (
-              <>
-                <Row label="Work type">
-                  <Select<string>
-                    value={issue.track ?? '__none'}
-                    onChange={(v) => set({ track: v === '__none' ? null : (v as WorkTrack) })}
-                    options={[
-                      { value: '__none', label: 'Unclassified' },
-                      { value: 'operations', label: 'Operations', icon: <span className="size-2 rounded-full" style={{ background: WORK_COLOR.operations }} /> },
-                      { value: 'technical', label: 'Technical', icon: <span className="size-2 rounded-full" style={{ background: WORK_COLOR.technical }} /> },
-                    ]}
-                    className="-mx-2 h-8 w-[calc(100%+16px)] border-transparent bg-transparent px-2 hover:bg-hover"
-                    renderValue={() => (
-                      <span className={cn('flex items-center gap-1.5', !issue.track && 'text-subtle')}>
-                        {issue.track && <span className="size-2 rounded-full" style={{ background: workColor({ track: issue.track, workStyle: null }) ?? undefined }} />}
-                        {trackLabel(issue.track)}
-                      </span>
-                    )}
-                  />
-                </Row>
-                {issue.track === 'technical' && (
-                  <Row label="Work style">
-                    <Select<string>
-                      value={issue.workStyle ?? '__none'}
-                      onChange={(v) => set({ workStyle: v === '__none' ? null : (v as WorkStyle) })}
-                      width={300}
-                      options={[
-                        { value: '__none', label: 'Not chosen' },
-                        ...WORK_STYLES.map((s) => ({ value: s.id, label: s.label, hint: CATEGORY_LABEL[s.category], icon: <span className="size-2 rounded-full" style={{ background: WORK_COLOR[s.category] }} /> })),
-                      ]}
-                      className="-mx-2 h-8 w-[calc(100%+16px)] border-transparent bg-transparent px-2 hover:bg-hover"
-                      renderValue={() =>
-                        issue.workStyle ? (
-                          <span className="flex min-w-0 items-center gap-1.5">
-                            <span className="size-2 shrink-0 rounded-full" style={{ background: workColor(issue) ?? undefined }} />
-                            <span className="truncate">{styleLabel(issue.workStyle)}</span>
-                          </span>
-                        ) : (
-                          <None>Not chosen</None>
-                        )
-                      }
-                    />
-                  </Row>
-                )}
-                {(issue.track === 'technical' || issue.moduleId) && (
-                  <Row label="Module">
-                    <Select<string>
-                      value={issue.moduleId ?? '__none'}
-                      onChange={(v) => set({ moduleId: v === '__none' ? null : v })}
-                      options={[{ value: '__none', label: 'None' }, ...modules.filter((m) => m.projectId === project.id).map((m) => ({ value: m.id, label: m.name }))]}
-                      searchable
-                      className="-mx-2 h-8 w-[calc(100%+16px)] border-transparent bg-transparent px-2 hover:bg-hover"
-                      renderValue={() => {
-                        const m = modules.find((x) => x.id === issue.moduleId)
-                        return m ? <span className="truncate">{m.name}</span> : <None />
-                      }}
-                    />
-                    {issue.moduleId && modules.some((m) => m.id === issue.moduleId) && (
-                      <Link to={moduleUrl(project, { id: issue.moduleId }, issue.key)} className="mt-0.5 inline-block text-[12px] font-medium text-accent hover:underline">
-                        Open module brief
-                      </Link>
-                    )}
-                  </Row>
-                )}
-              </>
-            )}
             <Row label="Assignee">
               <Popover
                 width={260}

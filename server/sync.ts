@@ -3,7 +3,7 @@ import { ensureSchema, pool, WORKSPACE_ID } from './db.js'
 import { scheduleRelay } from './calendarRelay.js'
 
 /** Collections shared by the whole team. Per-person UI state (theme, recents…) never leaves the browser. */
-export const COLLECTIONS = ['users', 'projects', 'sprints', 'issues', 'comments', 'history', 'worklogs', 'notifications', 'filters', 'dashboards', 'events', 'meetings', 'modules'] as const
+export const COLLECTIONS = ['users', 'projects', 'sprints', 'issues', 'comments', 'history', 'worklogs', 'notifications', 'filters', 'dashboards', 'events', 'meetings'] as const
 const COLLECTION_SET = new Set<string>(COLLECTIONS)
 
 /** Per-record ceiling. Attachments live in Blob storage, so real records are a few KB. */

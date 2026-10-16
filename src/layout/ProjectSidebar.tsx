@@ -1,11 +1,10 @@
-import { Link, NavLink, useLocation, useParams } from 'react-router-dom'
-import { BarChart3, Briefcase, CalendarRange, ChevronLeft, ChevronRight, Code2, Columns3, FlaskConical, Layers, ListTodo, Package, Settings, Rows3, Wrench } from 'lucide-react'
+import { NavLink, useParams } from 'react-router-dom'
+import { BarChart3, CalendarRange, ChevronLeft, ChevronRight, Columns3, ListTodo, Package, Settings, Rows3 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useProjectByKey, useStore } from '@/store/store'
 import { cn } from '@/lib/utils'
 import { ProjectAvatar } from './TopNav'
 import { useProjectFeatures } from '@/features/settings/features'
-import { WORK_COLOR, type WorkView } from '@/lib/work'
 
 function Item({ to, icon, children, end }: { to: string; icon: ReactNode; children: ReactNode; end?: boolean }) {
   const collapsed = useStore((s) => s.sidebarCollapsed)
@@ -25,32 +24,6 @@ function Item({ to, icon, children, end }: { to: string; icon: ReactNode; childr
       <span className="grid size-5 place-items-center">{icon}</span>
       {!collapsed && <span className="truncate">{children}</span>}
     </NavLink>
-  )
-}
-
-/** Opens the board / backlog in one work view (?work=…); active when that view is showing. */
-function WorkLink({ base, view, icon, color, indent, children }: { base: string; view: WorkView; icon: ReactNode; color: string; indent?: boolean; children: string }) {
-  const collapsed = useStore((s) => s.sidebarCollapsed)
-  const { pathname, search } = useLocation()
-  const page = /\/backlog$/.test(pathname) ? 'backlog' : 'board'
-  const active = /\/(board|backlog)$/.test(pathname) && new URLSearchParams(search).get('work') === view
-  return (
-    <Link
-      to={`${base}/${page}?work=${view}`}
-      title={collapsed ? children : undefined}
-      aria-current={active ? 'page' : undefined}
-      className={cn(
-        'relative flex h-8 items-center gap-3 rounded-lg px-3 text-[13.5px] transition',
-        active ? 'bg-hover font-semibold text-fg' : 'text-muted hover:bg-hover hover:text-fg',
-        indent && !collapsed && 'pl-9',
-        collapsed && 'justify-center px-0',
-      )}
-    >
-      <span className="grid size-5 place-items-center" style={{ color }}>
-        {icon}
-      </span>
-      {!collapsed && <span className="truncate">{children}</span>}
-    </Link>
   )
 }
 
@@ -97,22 +70,6 @@ export function ProjectSidebar() {
         <Item to={`${base}/issues`} icon={<Rows3 className="size-[18px]" />}>
           Issues
         </Item>
-        <Item to={`${base}/modules`} icon={<Layers className="size-[18px]" />}>
-          Modules
-        </Item>
-        {!collapsed && <div className="px-3 pt-4 pb-1.5 text-[11px] font-semibold tracking-wide text-subtle uppercase">Work</div>}
-        <WorkLink base={base} view="operations" color={WORK_COLOR.operations} icon={<Briefcase className="size-4" />}>
-          Operations
-        </WorkLink>
-        <WorkLink base={base} view="technical" color={WORK_COLOR.technical} icon={<Code2 className="size-4" />}>
-          Technical
-        </WorkLink>
-        <WorkLink base={base} view="research" color={WORK_COLOR.research} icon={<FlaskConical className="size-4" />} indent>
-          Research heavy
-        </WorkLink>
-        <WorkLink base={base} view="implementation" color={WORK_COLOR.implementation} icon={<Wrench className="size-4" />} indent>
-          Implementation heavy
-        </WorkLink>
         {features.releases && !collapsed && <div className="px-3 pt-4 pb-1.5 text-[11px] font-semibold tracking-wide text-subtle uppercase">Development</div>}
         {features.releases && (
           <Item to={`${base}/releases`} icon={<Package className="size-[18px]" />}>

@@ -2,7 +2,6 @@ import { NavLink, Navigate, useParams } from 'react-router-dom'
 import { useProjectByKey } from '@/store/store'
 import { ColumnsTab } from '@/features/settings/ColumnsTab'
 import { AccessTab, ComponentsTab, DetailsTab, FeaturesTab, IssueTypesTab } from '@/features/settings/tabs'
-import { WorkTypesTab } from '@/features/settings/WorkTypesTab'
 import { cn } from '@/lib/utils'
 
 const TABS = [
@@ -11,7 +10,6 @@ const TABS = [
   { id: 'columns', label: 'Board · Columns & statuses' },
   { id: 'components', label: 'Components' },
   { id: 'issuetypes', label: 'Issue types' },
-  { id: 'worktypes', label: 'Work types' },
   { id: 'features', label: 'Features' },
 ] as const
 
@@ -42,7 +40,6 @@ export default function ProjectSettingsPage() {
         {tab === 'columns' && <ColumnsTab project={project} />}
         {tab === 'components' && <ComponentsTab project={project} />}
         {tab === 'issuetypes' && <IssueTypesTab project={project} />}
-        {tab === 'worktypes' && <WorkTypesTab project={project} />}
         {tab === 'features' && <FeaturesTab project={project} />}
       </div>
     </div>

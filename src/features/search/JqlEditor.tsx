@@ -89,7 +89,6 @@ export function JqlEditor({ value, onChange, onRun }: { value: string; onChange:
   const users = useStore((s) => s.users)
   const issues = useStore((s) => s.issues)
   const sprints = useStore((s) => s.sprints)
-  const modules = useStore((s) => s.modules)
   const currentUserId = useStore((s) => s.currentUserId)
 
   const validation = useMemo(() => {
@@ -131,14 +130,6 @@ export function JqlEditor({ value, onChange, onRun }: { value: string; onChange:
         return ['-1d', '-7d', '-14d', '-30d', 'startOfDay()', 'startOfWeek()', 'now()']
       case 'flagged':
         return ['Impediment']
-      case 'track':
-        return ['Operations', 'Technical', 'EMPTY']
-      case 'workstyle':
-        return ['Direct', 'Focused', 'Research', '"Direct implementation"', '"Focused investigation"', 'Research-led']
-      case 'workcategory':
-        return ['Research', 'Implementation']
-      case 'module':
-        return [...new Set(modules.map((m) => m.name))]
       default:
         return []
     }
@@ -183,7 +174,7 @@ export function JqlEditor({ value, onChange, onRun }: { value: string; onChange:
     const f = fragment.replace(/^["']/, '').toLowerCase()
     return list.filter((s) => s.replace(/^["']/, '').toLowerCase().startsWith(f) && s.toLowerCase() !== f).slice(0, 12)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ctx, field, fragment, projects, users, issues, sprints, modules])
+  }, [ctx, field, fragment, projects, users, issues, sprints])
 
   const showSuggestions = focused && !dismissed && suggestions.length > 0
 

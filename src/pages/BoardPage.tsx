@@ -28,35 +28,9 @@ import { ContextMenu, useContextMenu, useIssueMenu } from '@/features/board/issu
 import { QuickCreate } from '@/features/board/QuickCreate'
 import { multiContainerCollision } from '@/features/board/collision'
 import { CompleteSprintModal, EditSprintModal } from '@/features/backlog/SprintModals'
-import { WorkViewSwitcher } from '@/features/work/WorkUI'
-import { useWorkView } from '@/features/work/hooks'
-import { WORK_COLOR, WORK_VIEWS, categoryOfWork, inWorkView, viewDefaults } from '@/lib/work'
 
-type GroupBy = 'none' | 'assignee' | 'epic' | 'subtask' | 'priority' | 'work'
-
-/** Swimlanes for "Group by: Work type". Dropping a card into a lane reclassifies it. */
-const WORK_LANES = [
-  { id: 'operations', label: 'Operations', color: WORK_COLOR.operations },
-  { id: 'research', label: 'Technical · Research heavy', color: WORK_COLOR.research },
-  { id: 'implementation', label: 'Technical · Implementation heavy', color: WORK_COLOR.implementation },
-  { id: 'technical', label: 'Technical · work style not chosen', color: WORK_COLOR.technical },
-  { id: '__none', label: 'Unclassified', color: null },
-] as const
-const workLaneOf = (i: Issue) => (i.track === 'operations' ? 'operations' : i.track === 'technical' ? (categoryOfWork(i) ?? 'technical') : '__none')
-function workLanePatch(lane: string, i: Issue): Partial<Issue> {
-  switch (lane) {
-    case 'operations':
-      return { track: 'operations' }
-    case 'research':
-      return { track: 'technical', workStyle: 'research' }
-    case 'implementation':
-      return { track: 'technical', workStyle: i.workStyle === 'focused' ? 'focused' : 'direct' }
-    case 'technical':
-      return { track: 'technical', workStyle: null }
-    default:
-      return { track: null }
-  }
-}
+type GroupBy = 'none' | 'assignee' | 'epic' | 'subtask' | 'priority'
+const GROUP_BYS: GroupBy[] = ['none', 'assignee', 'epic', 'subtask', 'priority']
 
 interface Lane {
   id: string
@@ -79,7 +53,8 @@ export default function BoardPage() {
   const sprints = useStore((s) => s.sprints)
   const allIssues = useStore((s) => s.issues)
   const activeSprints = useMemo(() => sprints.filter((s) => s.projectId === project.id && s.state === 'active').sort((a, b) => a.order - b.order), [sprints, project.id])
-  const [sprintId, setSprintId] = useState<string | null>(null)
+  // Several sprints can run at once; the board shows one at a time and remembers which.
+  const [sprintId, setSprintId] = usePersistentState<string | null>(`sb.board.sprint.${project.id}`, null)
   const sprint = activeSprints.find((s) => s.id === sprintId) ?? activeSprints[0] ?? null
   const [completeOpen, setCompleteOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
@@ -115,11 +90,6 @@ export default function BoardPage() {
         title={sprint.name}
         right={
           <>
-            {activeSprints.length > 1 && (
-              <div className="w-48">
-                <Select value={sprint.id} onChange={setSprintId} options={activeSprints.map((s) => ({ value: s.id, label: s.name }))} />
-              </div>
-            )}
             {daysLeft != null && (
               <Tooltip label={`${fmtDate(sprint.startDate)} – ${fmtDate(sprint.endDate)}`} side="bottom">
                 <span className={cn('inline-flex items-center gap-1.5 text-[13px]', daysLeft < 0 ? 'text-accent' : 'text-muted')}>
@@ -143,6 +113,7 @@ export default function BoardPage() {
           </>
         }
       >
+        <SprintTabs project={project} sprints={activeSprints} current={sprint.id} onChange={setSprintId} />
         <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-muted">
           {sprint.goal && (
             <span className="inline-flex items-center gap-1.5">
@@ -160,6 +131,36 @@ export default function BoardPage() {
       <Board key={`${project.id}:${sprint.id}`} project={project} sprint={sprint} />
       <CompleteSprintModal sprint={sprint} open={completeOpen} onClose={() => setCompleteOpen(false)} />
       <EditSprintModal sprint={sprint} open={editOpen} onClose={() => setEditOpen(false)} />
+    </div>
+  )
+}
+
+/** Every running sprint as a tab, so parallel sprints are one click apart. */
+function SprintTabs({ project, sprints, current, onChange }: { project: Project; sprints: Sprint[]; current: string; onChange: (id: string) => void }) {
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-2">
+      {sprints.length > 1 && (
+        <div role="tablist" aria-label="Running sprints" className="flex flex-wrap items-center gap-0.5 rounded-xl border border-line bg-surface-2 p-0.5">
+          {sprints.map((s) => (
+            <button
+              key={s.id}
+              role="tab"
+              aria-selected={s.id === current}
+              onClick={() => onChange(s.id)}
+              className={cn(
+                'inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-[13px] font-medium whitespace-nowrap transition',
+                s.id === current ? 'bg-surface-3 text-fg shadow-[inset_0_0_0_1px_var(--line-strong)]' : 'text-muted hover:bg-hover hover:text-fg',
+              )}
+            >
+              {s.name}
+              {s.endDate && <span className="text-[11px] text-subtle">ends {fmtDate(s.endDate, 'd MMM')}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+      <Link to={`/projects/${project.key}/backlog`} className="text-[12.5px] font-medium text-muted hover:text-fg hover:underline">
+        + Start another sprint
+      </Link>
     </div>
   )
 }
@@ -196,8 +197,9 @@ function Board({ project, sprint }: { project: Project; sprint: Sprint | null })
   const rankIssues = useStore((s) => s.rankIssues)
   const { open: openIssue, selectedKey } = useIssueModal()
   const [filters, setFilters] = useState<IssueFilters>(EMPTY_FILTERS)
-  const [view, setView] = useWorkView(project.id)
-  const [groupBy, setGroupBy] = usePersistentState<GroupBy>(`sb.board.group.${project.id}`, 'none')
+  const [savedGroupBy, setGroupBy] = usePersistentState<GroupBy>(`sb.board.group.${project.id}`, 'none')
+  // A browser may still remember a grouping that no longer exists (e.g. the removed "Work type").
+  const groupBy: GroupBy = GROUP_BYS.includes(savedGroupBy) ? savedGroupBy : 'none'
   const [collapsedCols, setCollapsedCols] = usePersistentState<string[]>(`sb.board.cols.${project.id}`, [])
   const [showLabels, setShowLabels] = usePersistentState(`sb.board.labels`, true)
   const [showDays, setShowDays] = usePersistentState(`sb.board.days`, true)
@@ -213,9 +215,8 @@ function Board({ project, sprint }: { project: Project; sprint: Sprint | null })
   const userById = useMemo(() => new Map(users.map((u) => [u.id, u])), [users])
   const doneIds = useMemo(() => new Set(project.statuses.filter((s) => s.category === 'done').map((s) => s.id)), [project.statuses])
 
-  // Everything that belongs on this board (pre-filter), then narrowed to the Operations / Technical view.
-  const sprintIssues = useMemo(() => allIssues.filter((i) => i.sprintId === sprint?.id && i.type !== 'epic'), [allIssues, sprint])
-  const boardIssues = useMemo(() => sprintIssues.filter((i) => inWorkView(i, view)), [sprintIssues, view])
+  // Everything that belongs on this board (pre-filter).
+  const boardIssues = useMemo(() => allIssues.filter((i) => i.sprintId === sprint?.id && i.type !== 'epic'), [allIssues, sprint])
 
   const visible = useMemo(() => applyFilters(boardIssues, filters, me.id, allIssues).sort(byRank), [boardIssues, filters, me.id, allIssues])
 
@@ -291,18 +292,6 @@ function Board({ project, sprint }: { project: Project; sprint: Sprint | null })
           }
         })
       }
-      case 'work':
-        return WORK_LANES.filter((l) => l.id !== 'technical' || visible.some((i) => workLaneOf(i) === 'technical')).map((l) => ({
-          id: l.id,
-          kind: groupBy,
-          title: (
-            <span className="flex items-center gap-2">
-              <span className="size-2.5 rounded-full" style={{ background: l.color ?? 'var(--subtle)' }} />
-              <span className="font-semibold">{l.label}</span>
-            </span>
-          ),
-          issues: visible.filter((i) => workLaneOf(i) === l.id),
-        }))
       case 'priority':
         return PRIORITIES.filter((p) => visible.some((i) => i.priority === p.id)).map((p) => ({
           id: p.id,
@@ -421,7 +410,6 @@ function Board({ project, sprint }: { project: Project; sprint: Sprint | null })
       if (groupBy === 'assignee') patch.assigneeId = target.lane === '__none' ? null : target.lane
       if (groupBy === 'priority') patch.priority = target.lane as Priority
       if (groupBy === 'epic' && issue.type !== 'subtask') patch.epicId = target.lane === '__none' ? null : target.lane
-      if (groupBy === 'work') Object.assign(patch, workLanePatch(target.lane, issue))
     }
     if (Object.keys(patch).length) updateIssue(issue.id, patch)
 
@@ -459,8 +447,7 @@ function Board({ project, sprint }: { project: Project; sprint: Sprint | null })
 
   return (
     <>
-      <div className="space-y-3 px-8 pb-4">
-        <WorkViewSwitcher view={view} onChange={setView} issues={sprintIssues} />
+      <div className="px-8 pb-4">
         <FilterBar
           project={project}
           issues={boardIssues}
@@ -482,7 +469,6 @@ function Board({ project, sprint }: { project: Project; sprint: Sprint | null })
                     { value: 'epic', label: 'Epic' },
                     { value: 'subtask', label: 'Subtask' },
                     { value: 'priority', label: 'Priority' },
-                    { value: 'work', label: 'Work type' },
                   ]}
                 />
               </div>
@@ -599,9 +585,7 @@ function Board({ project, sprint }: { project: Project; sprint: Sprint | null })
                             defaults={{
                               sprintId: sprint?.id ?? null,
                               statusId: c.statusIds[0],
-                              ...viewDefaults(view),
                               ...(groupBy === 'assignee' && lane.id !== '__none' ? { assigneeId: lane.id } : {}),
-                              ...(groupBy === 'work' ? workLanePatch(lane.id, {} as Issue) : {}),
                             }}
                           />
                         )}
@@ -617,14 +601,6 @@ function Board({ project, sprint }: { project: Project; sprint: Sprint | null })
               )
             })}
           </div>
-          {boardIssues.length === 0 && sprintIssues.length > 0 && (
-            <div className="py-10 text-center text-[13px] text-muted">
-              No {WORK_VIEWS.find((v) => v.id === view)?.label.toLowerCase()} work in this sprint.{' '}
-              <button className="font-semibold text-accent hover:underline" onClick={() => setView('all')}>
-                Show all work
-              </button>
-            </div>
-          )}
           {visible.length === 0 && boardIssues.length > 0 && (
             <div className="py-10 text-center text-[13px] text-muted">
               No issues match your filters.{' '}

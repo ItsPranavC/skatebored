@@ -16,7 +16,6 @@ import { agentById } from '@/features/agents/agents'
 import { Activity, type ActivityHandle } from './Activity'
 import { Attachments, ChildIssues, Description, LinkedIssues, readFilesAsAttachments } from './Sections'
 import { LogWorkModal } from './LogWorkModal'
-import { TaskBrief } from '@/features/work/TaskBrief'
 
 const isTyping = (el: EventTarget | null) => {
   const t = el as HTMLElement | null
@@ -342,7 +341,6 @@ export function IssueView({ issue, variant, onClose }: { issue: Issue; variant: 
             </div>
           </div>
           <Description issue={issue} />
-          {issue.type !== 'epic' && <TaskBrief key={issue.id} issue={issue} project={project} />}
           <Attachments issue={issue} onAttach={() => fileRef.current?.click()} />
           <ChildIssues issue={issue} project={project} creating={creatingChild} setCreating={setCreatingChild} />
           <LinkedIssues issue={issue} adding={linking} setAdding={setLinking} />

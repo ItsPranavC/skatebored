@@ -23,7 +23,6 @@ const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'))
 const AgentsPage = lazy(() => import('@/pages/AgentsPage'))
 const CalendarPage = lazy(() => import('@/pages/CalendarPage'))
 const MeetingsPage = lazy(() => import('@/pages/MeetingsPage'))
-const ModulesPage = lazy(() => import('@/pages/ModulesPage'))
 
 export default function App() {
   return (
@@ -66,8 +65,6 @@ export default function App() {
                   <Route path="reports" element={<ReportsPage />} />
                   <Route path="reports/:report" element={<ReportsPage />} />
                   <Route path="issues" element={<IssuesSearchPage />} />
-                  <Route path="modules" element={<ModulesPage />} />
-                  <Route path="modules/:moduleId" element={<ModulesPage />} />
                   <Route path="releases" element={<ReleasesPage />} />
                   <Route path="releases/:versionId" element={<ReleasesPage />} />
                   <Route path="settings" element={<ProjectSettingsPage />} />

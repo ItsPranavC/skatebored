@@ -15,13 +15,13 @@ function useScopedIssues(project: Project, scope: Scope) {
   const issues = useStore((s) => s.issues)
   const sprints = useStore((s) => s.sprints)
   return useMemo(() => {
-    const active = sprints.find((s) => s.projectId === project.id && s.state === 'active')
+    const running = new Set(sprints.filter((s) => s.projectId === project.id && s.state === 'active').map((s) => s.id))
     const done = new Set(project.statuses.filter((s) => s.category === 'done').map((s) => s.id))
     return issues.filter(
       (i) =>
         i.projectId === project.id &&
         i.type !== 'epic' &&
-        (scope === 'all' || (scope === 'open' && !done.has(i.statusId)) || (scope === 'sprint' && !!active && i.sprintId === active.id)),
+        (scope === 'all' || (scope === 'open' && !done.has(i.statusId)) || (scope === 'sprint' && !!i.sprintId && running.has(i.sprintId))),
     )
   }, [issues, sprints, project, scope])
 }
@@ -29,7 +29,7 @@ function useScopedIssues(project: Project, scope: Scope) {
 const scopeOptions = (project: Project) => [
   { value: 'all' as Scope, label: 'All issues' },
   { value: 'open' as Scope, label: 'Unresolved issues' },
-  ...(project.type === 'scrum' ? [{ value: 'sprint' as Scope, label: 'Active sprint' }] : []),
+  ...(project.type === 'scrum' ? [{ value: 'sprint' as Scope, label: 'Running sprints' }] : []),
 ]
 
 // ───────────────────────────── pie ─────────────────────────────

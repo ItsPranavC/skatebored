@@ -1,10 +1,9 @@
 import { forwardRef, type HTMLAttributes } from 'react'
 import { MoreHorizontal, ListTree } from 'lucide-react'
 import type { Issue, Project, User } from '@/types'
-import { cn, fmtDate, isDone } from '@/lib/utils'
+import { cn, isDone } from '@/lib/utils'
 import { Avatar, EpicTag, FlagIcon, IssueTypeIcon, LabelTag, PriorityIcon, StoryPoints } from '@/components/jira'
 import { Menu, Tooltip, type MenuItem } from '@/components/ui/overlay'
-import { WorkBadge } from '@/features/work/WorkUI'
 
 export interface IssueCardProps extends HTMLAttributes<HTMLDivElement> {
   issue: Issue
@@ -85,14 +84,6 @@ export const IssueCard = forwardRef<HTMLDivElement, IssueCardProps>(function Iss
         <IssueTypeIcon type={issue.type} />
         <span className={cn('text-[12px] font-medium whitespace-nowrap text-muted', done && 'line-through')}>{issue.key}</span>
         {issue.flagged && <FlagIcon />}
-        <WorkBadge issue={issue} />
-        {issue.track === 'operations' && issue.dueDate && !done && (
-          <Tooltip label={`Due ${fmtDate(issue.dueDate)}`}>
-            <span className={cn('rounded px-1 text-[11px] font-medium whitespace-nowrap', issue.dueDate.slice(0, 10) < new Date().toISOString().slice(0, 10) ? 'bg-accent-soft text-accent' : 'bg-surface-3 text-muted')}>
-              {fmtDate(issue.dueDate, 'd MMM')}
-            </span>
-          </Tooltip>
-        )}
         {subtasks && subtasks.total > 0 && (
           <Tooltip label={`${subtasks.done} of ${subtasks.total} sub-tasks done`}>
             <span className="inline-flex items-center gap-1 rounded bg-surface-3 px-1 text-[11px] text-muted">

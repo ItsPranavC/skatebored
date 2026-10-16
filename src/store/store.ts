@@ -22,10 +22,8 @@ import type {
   WorkLog,
   TeamEvent,
   Meeting,
-  WorkModule,
 } from '@/types'
 import { EPIC_COLORS, nowISO, priorityLabel, issueTypeLabel, uid, fmtDate } from '@/lib/utils'
-import { styleLabel, trackLabel } from '@/lib/work'
 
 export const INVERSE_LINK: Record<LinkType, LinkType> = {
   blocks: 'is blocked by',
@@ -119,14 +117,6 @@ export interface Actions {
   updateEvent: (id: ID, patch: Partial<Pick<TeamEvent, 'title' | 'description' | 'location' | 'start' | 'durationMinutes' | 'projectId'>>) => void
   deleteEvent: (id: ID) => void
 
-  // work briefs & modules
-  /** Saves one brief field, merged into the latest copy (so parallel edits to other fields survive). */
-  setIssueBrief: (id: ID, field: string, value: string) => void
-  createModule: (input: Pick<WorkModule, 'projectId' | 'name'> & Partial<WorkModule>) => WorkModule
-  updateModule: (id: ID, patch: Partial<Omit<WorkModule, 'id'>>) => void
-  setModuleBrief: (id: ID, field: string, value: string) => void
-  deleteModule: (id: ID) => void
-
   // meetings (records are created by the server; the client edits suggestions)
   updateMeeting: (id: ID, patch: Partial<Omit<Meeting, 'id'>>) => void
   deleteMeeting: (id: ID) => void
@@ -196,7 +186,6 @@ const emptyWorkspace = (): SeedData => ({
   dashboards: [],
   events: [],
   meetings: [],
-  modules: [],
 })
 
 const initialState = (): State => ({
@@ -241,12 +230,6 @@ function describe(s: State, issue: Issue, field: keyof Issue, value: unknown): s
       return fmtDate(value as string)
     case 'flagged':
       return value ? 'Impediment' : null
-    case 'track':
-      return trackLabel(value as Issue['track'])
-    case 'workStyle':
-      return styleLabel(value as Issue['workStyle'])
-    case 'moduleId':
-      return s.modules.find((m) => m.id === value)?.name ?? String(value)
     default:
       return String(value)
   }
@@ -272,9 +255,6 @@ const FIELD_LABEL: Partial<Record<keyof Issue, string>> = {
   originalEstimate: 'Original Estimate',
   flagged: 'Flagged',
   color: 'Epic Colour',
-  track: 'Work type',
-  workStyle: 'Work style',
-  moduleId: 'Module',
 }
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
@@ -353,7 +333,6 @@ export const useStore = create<Store>()(
               worklogs: s.worklogs.filter((w) => !issueIds.has(w.issueId)),
               notifications: s.notifications.filter((n) => !issueIds.has(n.issueId)),
               recent: s.recent.filter((r) => r.id !== id && !issueIds.has(r.id)),
-              modules: s.modules.filter((m) => m.projectId !== id),
             }
           }),
         toggleStarProject: (id) => set((s) => ({ projects: s.projects.map((p) => (p.id === id ? { ...p, starred: !p.starred } : p)) })),
@@ -407,12 +386,6 @@ export const useStore = create<Store>()(
           const n = project.issueCounter + 1
           const ts = nowISO()
           const parent = input.parentId ? s.issues.find((i) => i.id === input.parentId) : undefined
-          // Work type defaults are stamped at creation, so later default changes never alter existing work.
-          const moduleId = input.moduleId !== undefined ? input.moduleId : (parent?.moduleId ?? null)
-          const mod = moduleId ? s.modules.find((m) => m.id === moduleId) : undefined
-          const track = input.track !== undefined ? input.track : (parent?.track ?? (mod ? 'technical' : (project.defaultTrack ?? null)))
-          const workStyle =
-            track !== 'technical' ? null : input.workStyle !== undefined ? input.workStyle : (parent?.workStyle ?? mod?.defaultWorkStyle ?? project.defaultWorkStyle ?? null)
           const maxRank = s.issues.reduce((m, i) => Math.max(m, i.rank), 0)
           const issue: Issue = {
             id: uid('i-'),
@@ -443,9 +416,6 @@ export const useStore = create<Store>()(
             updatedAt: ts,
             resolvedAt: null,
             ...input,
-            track,
-            workStyle,
-            moduleId,
           }
           if (project.statuses.find((st) => st.id === issue.statusId)?.category === 'done') issue.resolvedAt = ts
           const h: HistoryEntry = { id: uid('h'), issueId: issue.id, userId: me(), field: 'created', from: null, to: null, createdAt: ts }
@@ -772,46 +742,6 @@ export const useStore = create<Store>()(
         updateEvent: (id, patch) => set((s) => ({ events: s.events.map((e) => (e.id === id ? { ...e, ...patch, updatedAt: nowISO() } : e)) })),
         deleteEvent: (id) => set((s) => ({ events: s.events.filter((e) => e.id !== id) })),
 
-        // ─────────── work briefs & modules ───────────
-        setIssueBrief: (id, field, value) => {
-          const issue = get().issues.find((i) => i.id === id)
-          if (!issue || (issue.brief?.[field] ?? '') === value) return
-          get().updateIssue(id, { brief: { ...issue.brief, [field]: value } })
-        },
-        createModule: (input) => {
-          const ts = nowISO()
-          const m: WorkModule = {
-            summary: '',
-            ownerId: me(),
-            defaultWorkStyle: null,
-            updatesLiveIn: '',
-            brief: {},
-            references: [],
-            criteria: [],
-            candidates: [],
-            tests: [],
-            createdById: me(),
-            createdAt: ts,
-            ...input,
-            id: uid('mod-'),
-            updatedAt: ts,
-          }
-          set((s) => ({ modules: [...s.modules, m] }))
-          return m
-        },
-        updateModule: (id, patch) => set((s) => ({ modules: s.modules.map((m) => (m.id === id ? { ...m, ...patch, updatedAt: nowISO() } : m)) })),
-        setModuleBrief: (id, field, value) => {
-          const m = get().modules.find((x) => x.id === id)
-          if (!m || (m.brief[field] ?? '') === value) return
-          get().updateModule(id, { brief: { ...m.brief, [field]: value } })
-        },
-        deleteModule: (id) =>
-          set((s) => ({
-            modules: s.modules.filter((m) => m.id !== id),
-            // tasks keep their own brief; they just stop opening the shared one
-            issues: s.issues.map((i) => (i.moduleId === id ? { ...i, moduleId: null, updatedAt: nowISO() } : i)),
-          })),
-
         // ─────────── meetings ───────────
         updateMeeting: (id, patch) => set((s) => ({ meetings: s.meetings.map((m) => (m.id === id ? { ...m, ...patch } : m)) })),
         deleteMeeting: (id) => set((s) => ({ meetings: s.meetings.filter((m) => m.id !== id) })),
@@ -846,7 +776,7 @@ export const useStore = create<Store>()(
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<State>
         const out = { ...current, ...p } as Store
-        for (const k of ['users', 'projects', 'sprints', 'issues', 'comments', 'history', 'worklogs', 'notifications', 'filters', 'dashboards', 'events', 'meetings', 'modules', 'recent'] as const) {
+        for (const k of ['users', 'projects', 'sprints', 'issues', 'comments', 'history', 'worklogs', 'notifications', 'filters', 'dashboards', 'events', 'meetings', 'recent'] as const) {
           if (!Array.isArray(out[k])) (out as unknown as Record<string, unknown>)[k] = current[k]
         }
         return out
