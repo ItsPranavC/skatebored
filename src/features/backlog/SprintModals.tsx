@@ -2,12 +2,14 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { addWeeks, differenceInCalendarDays, format } from 'date-fns'
 import { CheckCircle2, CircleDashed } from 'lucide-react'
-import type { Sprint } from '@/types'
+import type { Sprint, SprintKind, SprintStep, SprintStepKey } from '@/types'
 import { useStore } from '@/store/store'
 import { toast } from '@/store/ui'
 import { cn, sumPoints, toDate } from '@/lib/utils'
 import { Modal, Select } from '@/components/ui/overlay'
 import { Button, Field, Input, Textarea } from '@/components/ui/primitives'
+import { cleanDocs } from '@/lib/sprintPlan'
+import { SprintPlanFields } from './SprintPlan'
 
 const LOCAL = "yyyy-MM-dd'T'HH:mm"
 const toLocal = (d: Date) => format(d, LOCAL)
@@ -143,16 +145,21 @@ export function StartSprintModal({ sprint, open, onClose }: { sprint: Sprint | n
 
 export function EditSprintModal({ sprint, open, onClose }: { sprint: Sprint | null; open: boolean; onClose: () => void }) {
   const updateSprint = useStore((s) => s.updateSprint)
+  const engineering = useStore((s) => !!s.projects.find((p) => p.id === sprint?.projectId)?.engineering)
   const [name, setName] = useState('')
   const [goal, setGoal] = useState('')
   const [start, setStart] = useState('')
   const [end, setEnd] = useState('')
+  const [kind, setKind] = useState<SprintKind | null>(null)
+  const [steps, setSteps] = useState<Partial<Record<SprintStepKey, SprintStep>>>({})
   useEffect(() => {
     if (!open || !sprint) return
     setName(sprint.name)
     setGoal(sprint.goal)
     setStart(sprint.startDate ? toLocal(new Date(sprint.startDate)) : '')
     setEnd(sprint.endDate ? toLocal(new Date(sprint.endDate)) : '')
+    setKind(sprint.kind ?? null)
+    setSteps(sprint.steps ?? {})
   }, [open, sprint])
   const s = start ? fromLocal(start) : null
   const e = end ? fromLocal(end) : null
@@ -166,7 +173,10 @@ export function EditSprintModal({ sprint, open, onClose }: { sprint: Sprint | nu
         : null
   const submit = () => {
     if (!sprint || error) return
-    updateSprint(sprint.id, { name: name.trim(), goal: goal.trim(), startDate: s?.toISOString() ?? null, endDate: e?.toISOString() ?? null })
+    const plan = engineering
+      ? { kind, steps: Object.fromEntries(Object.entries(steps).map(([k, st]) => [k, { ...st, docs: cleanDocs(st.docs) }])) }
+      : {}
+    updateSprint(sprint.id, { name: name.trim(), goal: goal.trim(), startDate: s?.toISOString() ?? null, endDate: e?.toISOString() ?? null, ...plan })
     toast({ title: 'Sprint updated', tone: 'success' })
     onClose()
   }
@@ -175,7 +185,7 @@ export function EditSprintModal({ sprint, open, onClose }: { sprint: Sprint | nu
       open={open}
       onClose={onClose}
       title={`Edit sprint: ${sprint?.name ?? ''}`}
-      width={540}
+      width={engineering ? 600 : 540}
       footer={
         <>
           <Button variant="subtle" onClick={onClose}>
@@ -206,8 +216,9 @@ export function EditSprintModal({ sprint, open, onClose }: { sprint: Sprint | nu
           </Field>
         </div>
         <Field label="Sprint goal">
-          <Textarea rows={3} value={goal} onChange={(ev) => setGoal(ev.target.value)} />
+          <Textarea rows={engineering ? 2 : 3} value={goal} onChange={(ev) => setGoal(ev.target.value)} />
         </Field>
+        {engineering && <SprintPlanFields kind={kind} steps={steps} onKind={setKind} onSteps={setSteps} />}
         {error && <p className="text-[13px] text-accent">{error}</p>}
         <button type="submit" className="hidden" />
       </form>

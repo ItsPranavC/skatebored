@@ -31,7 +31,7 @@ export function DetailsTab({ project }: { project: Project }) {
   const [confirm, setConfirm] = useState('')
   const [deleteOpen, setDeleteOpen] = useState(false)
   useEffect(() => setForm(project), [project])
-  const dirty = (['name', 'description', 'category', 'leadId', 'icon', 'color', 'estimation'] as const).some((k) => form[k] !== project[k])
+  const dirty = (['name', 'description', 'category', 'leadId', 'icon', 'color', 'estimation'] as const).some((k) => form[k] !== project[k]) || !!form.engineering !== !!project.engineering
   const set = <K extends keyof Project>(k: K, v: Project[K]) => setForm((f) => ({ ...f, [k]: v }))
   const save = () => {
     if (!form.name.trim()) return toast({ title: 'Name is required', tone: 'error' })
@@ -43,6 +43,7 @@ export function DetailsTab({ project }: { project: Project }) {
       icon: form.icon,
       color: form.color,
       estimation: form.estimation,
+      engineering: !!form.engineering,
       memberIds: project.memberIds.includes(form.leadId) ? project.memberIds : [...project.memberIds, form.leadId],
     })
     toast({ title: 'Project details saved', tone: 'success' })
@@ -95,6 +96,9 @@ export function DetailsTab({ project }: { project: Project }) {
               { value: 'count', label: 'Issue count' },
             ]}
           />
+        </Field>
+        <Field label="Engineering team" hint="Each sprint is Research (research, alternatives, solution) or Implementation (an implementation date), with Google Docs and presentation times.">
+          <Toggle checked={!!form.engineering} onChange={(v) => set('engineering', v)} label="Engineering project" />
         </Field>
         <div className="flex gap-2 pt-2">
           <Button variant="primary" onClick={save} disabled={!dirty}>

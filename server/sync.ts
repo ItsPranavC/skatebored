@@ -229,7 +229,7 @@ export async function applyOps(ops: Op[], userId: string) {
     await db.query('update sb_workspaces set seq = $2 where id = $1', [WORKSPACE_ID, v])
     await db.query('commit')
     // Team calendar changed (events, sprint dates, releases): copy it to members' Google Calendars once the response is out.
-    if (ops.some((o) => o.c === 'events' || o.c === 'sprints' || (o.c === 'projects' && (o.op !== 'patch' || 'versions' in (o.d ?? {}))))) scheduleRelay()
+    if (ops.some((o) => o.c === 'events' || o.c === 'sprints' || (o.c === 'projects' && (o.op !== 'patch' || 'versions' in (o.d ?? {}) || 'engineering' in (o.d ?? {}))))) scheduleRelay()
     return { seq: v as number | null, corrections, missing }
   } catch (e) {
     await db.query('rollback').catch(() => {})

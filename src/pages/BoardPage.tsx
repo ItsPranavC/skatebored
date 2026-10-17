@@ -28,6 +28,7 @@ import { ContextMenu, useContextMenu, useIssueMenu } from '@/features/board/issu
 import { QuickCreate } from '@/features/board/QuickCreate'
 import { multiContainerCollision } from '@/features/board/collision'
 import { CompleteSprintModal, EditSprintModal } from '@/features/backlog/SprintModals'
+import { KindBadge, SprintPlan } from '@/features/backlog/SprintPlan'
 
 type GroupBy = 'none' | 'assignee' | 'epic' | 'subtask' | 'priority'
 const GROUP_BYS: GroupBy[] = ['none', 'assignee', 'epic', 'subtask', 'priority']
@@ -87,7 +88,12 @@ export default function BoardPage() {
     <div className="flex h-full min-h-0 flex-col">
       <BoardHeader
         project={project}
-        title={sprint.name}
+        title={
+          <span className="inline-flex items-center gap-2.5">
+            {sprint.name}
+            {project.engineering && sprint.kind && <KindBadge kind={sprint.kind} />}
+          </span>
+        }
         right={
           <>
             {daysLeft != null && (
@@ -127,6 +133,7 @@ export default function BoardPage() {
             </span>
           )}
         </div>
+        <SprintPlan project={project} sprint={sprint} onEdit={() => setEditOpen(true)} className="mt-2.5" />
       </BoardHeader>
       <Board key={`${project.id}:${sprint.id}`} project={project} sprint={sprint} />
       <CompleteSprintModal sprint={sprint} open={completeOpen} onClose={() => setCompleteOpen(false)} />
@@ -153,6 +160,7 @@ function SprintTabs({ project, sprints, current, onChange }: { project: Project;
               )}
             >
               {s.name}
+              {project.engineering && s.kind && <KindBadge kind={s.kind} />}
               {s.endDate && <span className="text-[11px] text-subtle">ends {fmtDate(s.endDate, 'd MMM')}</span>}
             </button>
           ))}

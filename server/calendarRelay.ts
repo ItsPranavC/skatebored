@@ -102,6 +102,16 @@ function allDay(key: string, title: string, iso: string, description: string): I
   }
 }
 
+/** Engineering sprint steps (mirrors src/lib/sprintPlan.ts). */
+const STEPS: Record<string, [key: string, label: string][]> = {
+  research: [
+    ['research', 'Research'],
+    ['alternatives', 'Alternatives'],
+    ['solution', 'Solution'],
+  ],
+  implementation: [['implementation', 'Implementation']],
+}
+
 const valid = (v: unknown): v is string => typeof v === 'string' && !Number.isNaN(Date.parse(v))
 
 async function desiredItems(): Promise<Item[]> {
@@ -110,6 +120,7 @@ async function desiredItems(): Promise<Item[]> {
     [WORKSPACE_ID],
   )
   const projectName = new Map(rows.filter((r) => r.collection === 'projects').map((r) => [r.id, String(r.data.name ?? '')]))
+  const engineering = new Set(rows.filter((r) => r.collection === 'projects' && r.data.engineering).map((r) => r.id))
   const cutoff = Date.now() - 2 * 86_400_000
   const items: Item[] = []
   for (const { collection, id, data: d } of rows) {
@@ -133,6 +144,28 @@ async function desiredItems(): Promise<Item[]> {
       const goal = d.goal ? `Sprint goal: ${d.goal}` : ''
       if (valid(d.startDate) && Date.parse(d.startDate) >= cutoff) items.push(allDay(`sprint-start:${id}`, `${d.name} starts${project ? ` · ${project}` : ''}`, d.startDate, goal))
       if (valid(d.endDate) && Date.parse(d.endDate) >= cutoff) items.push(allDay(`sprint-end:${id}`, `${d.name} ends${project ? ` · ${project}` : ''}`, d.endDate, goal))
+      // Engineering sprints: each step's presentation (30 min) and the implementation date.
+      const steps = STEPS[String(d.kind)]
+      if (steps && engineering.has(String(d.projectId)))
+        for (const [key, label] of steps) {
+          const step = (d.steps as Record<string, { docs?: string[]; presentAt?: string | null; date?: string | null }> | undefined)?.[key]
+          const docs = (step?.docs ?? []).slice(0, 10).join('\n')
+          if (valid(step?.presentAt) && Date.parse(step.presentAt) >= cutoff) {
+            const start = new Date(step.presentAt)
+            items.push({
+              key: `sprint-present:${id}:${key}`,
+              body: {
+                summary: `${label} presentation · ${d.name}${project ? ` · ${project}` : ''}`,
+                description: [docs && `Docs:\n${docs}`, footer()].filter(Boolean).join('\n\n'),
+                start: { dateTime: start.toISOString() },
+                end: { dateTime: new Date(start.getTime() + 30 * 60_000).toISOString() },
+                extendedProperties: { private: { skatebored: `sprint-present:${id}:${key}` } },
+              },
+            })
+          }
+          if (valid(step?.date) && Date.parse(step.date) >= cutoff)
+            items.push(allDay(`sprint-impl:${id}`, `${d.name} implementation${project ? ` · ${project}` : ''}`, step.date, docs && `Docs:\n${docs}`))
+        }
     }
     if (collection === 'projects')
       for (const v of (d.versions as { id: string; name: string; description?: string; releaseDate: string | null; released: boolean; archived: boolean }[] | undefined) ?? [])

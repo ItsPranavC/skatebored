@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useStore } from '@/store/store'
 import { toast } from '@/store/ui'
 import { Modal } from '@/components/ui/overlay'
-import { Button, Field, Input, Textarea } from '@/components/ui/primitives'
+import { Button, Field, Input, Textarea, Toggle } from '@/components/ui/primitives'
 import { UserPicker } from '@/components/jira'
 import { cn, EPIC_COLORS } from '@/lib/utils'
 import { keyFromName, PROJECT_ICONS, validateKey } from './projectUtils'
@@ -20,6 +20,7 @@ export function CreateProjectModal({ open, onClose }: { open: boolean; onClose: 
   const [description, setDescription] = useState('')
   const [icon, setIcon] = useState(PROJECT_ICONS[0]!)
   const [color, setColor] = useState(EPIC_COLORS[0]!)
+  const [engineering, setEngineering] = useState(false)
   const [submitted, setSubmitted] = useState(false)
 
   useEffect(() => {
@@ -32,6 +33,7 @@ export function CreateProjectModal({ open, onClose }: { open: boolean; onClose: 
       setIcon(PROJECT_ICONS[0]!)
       setColor(EPIC_COLORS[projects.length % EPIC_COLORS.length]!)
       setSubmitted(false)
+      setEngineering(false)
     }
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -41,7 +43,7 @@ export function CreateProjectModal({ open, onClose }: { open: boolean; onClose: 
   const submit = () => {
     setSubmitted(true)
     if (keyError || nameError) return
-    const p = createProject({ name: name.trim(), key, type: 'scrum', leadId: leadId ?? me, description, icon, color })
+    const p = createProject({ name: name.trim(), key, type: 'scrum', leadId: leadId ?? me, description, icon, color, engineering })
     onClose()
     toast({ title: `${p.name} created`, description: 'Your scrum project is ready.', tone: 'success' })
     navigate(`/projects/${p.key}/backlog`)
@@ -104,6 +106,9 @@ export function CreateProjectModal({ open, onClose }: { open: boolean; onClose: 
         </Field>
         <Field label="Description">
           <Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What is this project about?" />
+        </Field>
+        <Field label="Engineering team" hint="Sprints become Research or Implementation, with Google Docs and presentation times.">
+          <Toggle checked={engineering} onChange={setEngineering} label="Engineering project" />
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Icon">

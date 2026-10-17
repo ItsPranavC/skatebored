@@ -5,7 +5,7 @@ import { HttpError } from './auth.js'
 import { requireAgent, setCurrentIssue, type AgentRow } from './agents.js'
 import { waitUntil } from '@vercel/functions'
 import { docLine, docsOverview, docStats, docsConfigured, ensureFreshDocs, getDoc, listDocs, searchDocs } from './docs.js'
-import { addComment, issueLine, loadSnapshot, lookups, patchIssue, renderIssue, sortTasks, type Issue, type Lookups, type Project, type Snapshot } from './workspace.js'
+import { addComment, issueLine, loadSnapshot, lookups, patchIssue, renderIssue, sortTasks, sprintPlanLines, type Issue, type Lookups, type Project, type Snapshot } from './workspace.js'
 
 /**
  * skatebored MCP server (Streamable HTTP, stateless: one server per request).
@@ -193,6 +193,7 @@ function build(ctx: Ctx, intro: string) {
         out.push('', `## Active sprint: ${s.name}`, '')
         if (s.goal) out.push(`Goal: ${s.goal}`)
         out.push(`Dates: ${s.startDate?.slice(0, 10) ?? '—'} → ${s.endDate?.slice(0, 10) ?? '—'}`)
+        if (p.engineering) out.push(...sprintPlanLines(s))
         out.push(`Progress: ${done.length}/${work.length} issues done${p.estimation === 'points' ? `, ${pts(done)}/${pts(work)} points` : ''}`)
         out.push('', ...sortTasks(work, L).map((i) => issueLine(i, L)))
       }

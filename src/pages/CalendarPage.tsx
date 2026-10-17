@@ -27,6 +27,7 @@ import { ProjectAvatar } from '@/layout/TopNav'
 import { cn, toDate } from '@/lib/utils'
 import { useGoogleCalendar } from '@/features/calendar/googleCalendar'
 import type { TeamEvent } from '@/types'
+import { STEPS, docLabel } from '@/lib/sprintPlan'
 
 type View = 'month' | 'week'
 type Kind = 'event' | 'sprint' | 'release'
@@ -40,6 +41,8 @@ interface Item {
   allDay: boolean
   event?: TeamEvent
   sub?: string
+  /** Sprint presentations: the step's Google Docs */
+  docs?: string[]
 }
 
 const KIND_STYLE: Record<Kind, string> = {
@@ -74,6 +77,15 @@ function useCalendarItems(): Item[] {
       const e = toDate(sp.endDate)
       if (s) out.push({ key: `ss:${sp.id}`, kind: 'sprint', title: `${sp.name} starts`, start: s, allDay: true, sub: project?.name })
       if (e) out.push({ key: `se:${sp.id}`, kind: 'sprint', title: `${sp.name} ends`, start: e, allDay: true, sub: project?.name })
+      // Engineering sprints: each step's presentation, and the implementation date.
+      if (project?.engineering && sp.kind)
+        for (const { key, label } of STEPS[sp.kind]) {
+          const step = sp.steps?.[key]
+          const at = toDate(step?.presentAt)
+          const day = toDate(step?.date)
+          if (at) out.push({ key: `sp:${sp.id}:${key}`, kind: 'sprint', title: `${label} presentation · ${sp.name}`, start: at, allDay: false, sub: project.name, docs: step?.docs })
+          if (day) out.push({ key: `si:${sp.id}`, kind: 'sprint', title: `${sp.name} implementation`, start: day, allDay: true, sub: project.name })
+        }
     }
     for (const p of projects)
       for (const v of p.versions) {
@@ -202,7 +214,11 @@ function ItemDetail({ item, onClose, onEdit }: { item: Item; onClose: () => void
   const [confirm, setConfirm] = useState(false)
   const e = item.event
   const creator = e ? users.find((u) => u.id === e.createdById) : undefined
-  const when = item.allDay ? format(item.start, 'EEEE d MMMM') : `${format(item.start, 'EEEE d MMMM · H:mm')}–${format(addMinutes(item.start, e?.durationMinutes ?? 0), 'H:mm')}`
+  const when = item.allDay
+    ? format(item.start, 'EEEE d MMMM')
+    : e
+      ? `${format(item.start, 'EEEE d MMMM · H:mm')}–${format(addMinutes(item.start, e.durationMinutes), 'H:mm')}`
+      : format(item.start, 'EEEE d MMMM · H:mm')
   return (
     <>
       <Modal
@@ -240,7 +256,22 @@ function ItemDetail({ item, onClose, onEdit }: { item: Item; onClose: () => void
               <Avatar user={creator} size="xs" /> Added by {creator.name}
             </div>
           )}
-          {!e && <p className="text-[12px] text-subtle">From the project’s sprint and release dates; it’s on everyone’s Google Calendar as an all-day event. Change it on the project.</p>}
+          {!!item.docs?.length && (
+            <div className="flex flex-wrap gap-1.5">
+              {item.docs.map((url, i) => (
+                <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="rounded-md border border-line px-2 py-0.5 text-accent hover:underline">
+                  {docLabel(url)}
+                </a>
+              ))}
+            </div>
+          )}
+          {!e && (
+            <p className="text-[12px] text-subtle">
+              {item.allDay
+                ? 'From the project’s sprint and release dates; it’s on everyone’s Google Calendar as an all-day event. Change it on the project.'
+                : 'From the sprint’s plan; it’s on everyone’s Google Calendar. Change it with Edit sprint.'}
+            </p>
+          )}
         </div>
       </Modal>
       <ConfirmDialog

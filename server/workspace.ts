@@ -31,6 +31,7 @@ export interface Project {
   statuses: Status[]
   repo?: string | null
   estimation: 'points' | 'count'
+  engineering?: boolean
 }
 export interface Sprint {
   id: string
@@ -41,6 +42,34 @@ export interface Sprint {
   startDate: string | null
   endDate: string | null
   order: number
+  kind?: 'research' | 'implementation' | null
+  steps?: Record<string, { docs?: string[]; presentAt?: string | null; date?: string | null }>
+}
+
+const PLAN_STEPS: Record<string, [key: string, label: string][]> = {
+  research: [
+    ['research', 'Research'],
+    ['alternatives', 'Alternatives'],
+    ['solution', 'Solution'],
+  ],
+  implementation: [['implementation', 'Implementation']],
+}
+
+/** Engineering sprints: type, then per step its docs and presentation time. Empty for other sprints. */
+export function sprintPlanLines(s: Sprint): string[] {
+  const steps = s.kind ? PLAN_STEPS[s.kind] : undefined
+  if (!steps) return []
+  const out = [`Type: ${s.kind === 'research' ? 'Research (research → alternatives → solution)' : 'Implementation'}`]
+  for (const [key, label] of steps) {
+    const st = s.steps?.[key]
+    const bits = [
+      key === 'implementation' ? `implementation date ${st?.date?.slice(0, 10) ?? 'not set'}` : null,
+      `presentation ${st?.presentAt ?? 'not scheduled'}`,
+      st?.docs?.length ? `docs: ${st.docs.join(', ')}` : 'no docs yet',
+    ]
+    out.push(`- ${label}: ${bits.filter(Boolean).join(' · ')}`)
+  }
+  return out
 }
 export interface Issue {
   id: string

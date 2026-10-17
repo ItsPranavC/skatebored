@@ -69,6 +69,8 @@ export interface Project {
   repo?: string | null
   /** Board "estimation statistic" — story points or issue count. */
   estimation: 'points' | 'count'
+  /** Engineering team project: each sprint is Research or Implementation, with docs and presentation times. */
+  engineering?: boolean
   createdAt: string
 }
 
@@ -91,6 +93,23 @@ export interface Sprint {
   completedPoints: number
   incompleteIssueIds: ID[]
   order: number
+  /** Engineering projects only. */
+  kind?: SprintKind | null
+  /** Docs and presentation time per step (see lib/sprintPlan.ts). */
+  steps?: Partial<Record<SprintStepKey, SprintStep>>
+}
+
+export type SprintKind = 'research' | 'implementation'
+/** Research sprints: research → alternatives → solution. Implementation sprints: implementation. */
+export type SprintStepKey = 'research' | 'alternatives' | 'solution' | 'implementation'
+
+export interface SprintStep {
+  /** Google Docs links */
+  docs: string[]
+  /** When the team presents this step (ISO) */
+  presentAt: string | null
+  /** Implementation step only: the day it gets implemented (ISO) */
+  date?: string | null
 }
 
 export type LinkType = 'blocks' | 'is blocked by' | 'relates to' | 'duplicates' | 'is duplicated by' | 'clones' | 'is cloned by'

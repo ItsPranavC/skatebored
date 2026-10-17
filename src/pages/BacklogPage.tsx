@@ -27,6 +27,8 @@ import { ContextMenu, useContextMenu, useIssueMenu } from '@/features/board/issu
 import { QuickCreate } from '@/features/board/QuickCreate'
 import { multiContainerCollision } from '@/features/board/collision'
 import { CompleteSprintModal, EditSprintModal, StartSprintModal } from '@/features/backlog/SprintModals'
+import { KindBadge, SprintPlan } from '@/features/backlog/SprintPlan'
+import { SPRINT_KINDS } from '@/lib/sprintPlan'
 
 const BACKLOG = 'backlog'
 
@@ -271,6 +273,7 @@ function Backlog({ project }: { project: Project }) {
                   title={
                     <>
                       <span className="font-semibold">{sprint.name}</span>
+                      {project.engineering && sprint.kind && <KindBadge kind={sprint.kind} />}
                       {sprint.state === 'active' && <span className="rounded bg-progress px-1.5 text-[10px] font-bold tracking-wide text-progress-fg uppercase">Active</span>}
                       {sprint.startDate && sprint.endDate ? (
                         <span className="text-muted">
@@ -287,6 +290,7 @@ function Backlog({ project }: { project: Project }) {
                     </>
                   }
                   goal={sprint.goal}
+                  plan={project.engineering && <SprintPlan project={project} sprint={sprint} onEdit={() => setEditFor(sprint)} className="mx-8 mb-2" />}
                   actions={
                     <>
                       <Totals project={project} issues={all} />
@@ -349,15 +353,28 @@ function Backlog({ project }: { project: Project }) {
               actions={
                 <>
                   <Totals project={project} issues={backlogRaw} />
-                  <Button
-                    variant="default"
-                    onClick={() => {
-                      const s = createSprint(project.id)
-                      toast({ title: `${s.name} created`, tone: 'success' })
-                    }}
-                  >
-                    Create sprint
-                  </Button>
+                  {project.engineering ? (
+                    <Menu
+                      trigger={<Button variant="default">Create sprint</Button>}
+                      items={SPRINT_KINDS.map((k) => ({
+                        label: `${k.label} sprint`,
+                        onClick: () => {
+                          const s = createSprint(project.id, { kind: k.value })
+                          toast({ title: `${s.name} created`, description: k.hint, tone: 'success' })
+                        },
+                      }))}
+                    />
+                  ) : (
+                    <Button
+                      variant="default"
+                      onClick={() => {
+                        const s = createSprint(project.id)
+                        toast({ title: `${s.name} created`, tone: 'success' })
+                      }}
+                    >
+                      Create sprint
+                    </Button>
+                  )}
                 </>
               }
             >
@@ -460,6 +477,7 @@ function Container({
   id,
   title,
   goal,
+  plan,
   actions,
   collapsed,
   onToggle,
@@ -469,6 +487,7 @@ function Container({
   id: string
   title: ReactNode
   goal?: string
+  plan?: ReactNode
   actions?: ReactNode
   collapsed: boolean
   onToggle: () => void
@@ -502,6 +521,7 @@ function Container({
         <div className="flex items-center gap-1.5">{actions}</div>
       </header>
       {goal && !collapsed && <p className="px-8 pb-2 text-[13px] text-muted">{goal}</p>}
+      {!collapsed && plan}
       {!collapsed && <div className="space-y-px">{children}</div>}
     </section>
   )
