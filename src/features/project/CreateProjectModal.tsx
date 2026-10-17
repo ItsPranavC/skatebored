@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useStore } from '@/store/store'
 import { toast } from '@/store/ui'
 import { Modal } from '@/components/ui/overlay'
-import { Button, Field, Input, Textarea, Toggle } from '@/components/ui/primitives'
+import { Button, Field, Input, Textarea } from '@/components/ui/primitives'
 import { UserPicker } from '@/components/jira'
 import { cn, EPIC_COLORS } from '@/lib/utils'
 import { keyFromName, PROJECT_ICONS, validateKey } from './projectUtils'
@@ -46,7 +46,7 @@ export function CreateProjectModal({ open, onClose }: { open: boolean; onClose: 
     const p = createProject({ name: name.trim(), key, type: 'scrum', leadId: leadId ?? me, description, icon, color, engineering })
     onClose()
     toast({ title: `${p.name} created`, description: 'Your scrum project is ready.', tone: 'success' })
-    navigate(`/projects/${p.key}/backlog`)
+    navigate(`/projects/${p.key}/sprints`)
   }
 
   return (
@@ -107,8 +107,23 @@ export function CreateProjectModal({ open, onClose }: { open: boolean; onClose: 
         <Field label="Description">
           <Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What is this project about?" />
         </Field>
-        <Field label="Engineering team" hint="Sprints become Research or Implementation, with Google Docs and presentation times.">
-          <Toggle checked={engineering} onChange={setEngineering} label="Engineering project" />
+        <Field label="Team" required>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { value: true, label: 'Engineering', hint: 'Sprints are Research or Implementation' },
+              { value: false, label: 'Other team', hint: 'Plain sprints' },
+            ].map((o) => (
+              <button
+                key={o.label}
+                type="button"
+                onClick={() => setEngineering(o.value)}
+                className={cn('rounded-lg border px-3 py-2 text-left transition', engineering === o.value ? 'border-accent bg-accent-soft' : 'border-line hover:bg-hover')}
+              >
+                <div className="text-[13px] font-semibold">{o.label}</div>
+                <div className="text-[12px] text-muted">{o.hint}</div>
+              </button>
+            ))}
+          </div>
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Icon">

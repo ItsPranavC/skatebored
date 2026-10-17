@@ -50,7 +50,12 @@ function CreateIssueForm({ defaults, onClose }: { defaults: Partial<Issue>; onCl
   const [priority, setPriority] = useState<Priority>(defaults.priority ?? 'medium')
   const [labels, setLabels] = useState<string[]>(defaults.labels ?? [])
   const [labelsEditing, setLabelsEditing] = useState(false)
-  const [sprintId, setSprintId] = useState<string | null>(defaults.sprintId !== undefined ? defaults.sprintId : null)
+  // No backlog any more: new tasks go into a running sprint (or the next planned one) unless told otherwise.
+  const openSprintOf = (pid: string) => {
+    const open = sprints.filter((s) => s.projectId === pid && s.state !== 'closed').sort((a, b) => a.order - b.order)
+    return (open.find((s) => s.state === 'active') ?? open[0])?.id ?? null
+  }
+  const [sprintId, setSprintId] = useState<string | null>(defaults.sprintId !== undefined ? defaults.sprintId : openSprintOf(initialProjectId))
   const [storyPoints, setStoryPoints] = useState(defaults.storyPoints?.toString() ?? '')
   const [epicId, setEpicId] = useState<string | null>(defaults.epicId ?? parent?.epicId ?? null)
   const [dueDate, setDueDate] = useState<string | null>(defaults.dueDate ?? null)
@@ -70,7 +75,7 @@ function CreateIssueForm({ defaults, onClose }: { defaults: Partial<Issue>; onCl
   const changeProject = (id: string) => {
     setProjectId(id)
     setStatusId(null)
-    setSprintId(null)
+    setSprintId(openSprintOf(id))
     setEpicId(null)
     const p = projects.find((x) => x.id === id)
     if (assigneeId && p && !p.memberIds.includes(assigneeId)) setAssigneeId(null)
@@ -230,7 +235,7 @@ function CreateIssueForm({ defaults, onClose }: { defaults: Partial<Issue>; onCl
                 value={sprintId ?? '__none'}
                 onChange={(v) => setSprintId(v === '__none' ? null : v)}
                 className={fieldBox}
-                options={[{ value: '__none', label: 'Backlog (no sprint)' }, ...projectSprints.map((s) => ({ value: s.id, label: s.name, hint: s.state === 'active' ? 'Active' : undefined }))]}
+                options={[{ value: '__none', label: 'No sprint' }, ...projectSprints.map((s) => ({ value: s.id, label: s.name, hint: s.state === 'active' ? 'Active' : undefined }))]}
               />
             </Field>
           )}

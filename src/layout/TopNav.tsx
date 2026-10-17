@@ -1,5 +1,5 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { Bot, ChevronDown, HelpCircle, LayoutDashboard, LogOut, Moon, Plus, Search, Settings, Sun, Users, FolderKanban, UserCog } from 'lucide-react'
+import { Bot, ChevronDown, HelpCircle, LogOut, Moon, Plus, Search, Settings, Sun, Users, FolderKanban, UserCog } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { useClerk } from '@clerk/react'
 import { useMe, useStore } from '@/store/store'
@@ -72,11 +72,9 @@ export function TopNav() {
   const navigate = useNavigate()
   const projects = useStore((s) => s.projects)
   const recent = useStore((s) => s.recent)
-  const dashboards = useStore((s) => s.dashboards)
   const theme = useStore((s) => s.theme)
   const setTheme = useStore((s) => s.setTheme)
   const clerk = useClerk()
-  const openCreate = useUI((s) => s.openCreate)
   const setSearchOpen = useUI((s) => s.setSearchOpen)
   const setShortcutsOpen = useUI((s) => s.setShortcutsOpen)
   const [createProject, setCreateProject] = useState(false)
@@ -90,14 +88,11 @@ export function TopNav() {
 
   return (
     <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center gap-1 border-b border-line bg-canvas/95 px-3 backdrop-blur">
-      <Link to="/your-work" className="mr-3 flex items-center rounded-lg px-1.5 py-1 hover:bg-hover" aria-label="skatebored home">
+      <Link to="/projects" className="mr-3 flex items-center rounded-lg px-1.5 py-1 hover:bg-hover" aria-label="skatebored home">
         <Logo />
       </Link>
 
       <nav className="hidden items-center gap-0.5 lg:flex">
-        <NavLink to="/your-work" className={({ isActive }) => cn('flex h-8 items-center rounded-lg px-2.5 text-[14px] font-medium hover:bg-hover', isActive ? 'text-accent' : 'text-fg')}>
-          Your work
-        </NavLink>
         <NavDropdown label="Projects" to="/projects">
           {(close) => (
             <>
@@ -105,7 +100,7 @@ export function TopNav() {
                 <>
                   <DropHeading>Starred</DropHeading>
                   {starred.map((p) => (
-                    <DropLink key={p.id} to={`/projects/${p.key}/board`} onClick={close} icon={<ProjectAvatar project={p} />} sub="Scrum project">
+                    <DropLink key={p.id} to={`/projects/${p.key}/sprints`} onClick={close} icon={<ProjectAvatar project={p} />} sub={p.engineering ? 'Engineering' : 'Project'}>
                       {p.name} ({p.key})
                     </DropLink>
                   ))}
@@ -113,7 +108,7 @@ export function TopNav() {
               )}
               <DropHeading>Recent</DropHeading>
               {(recentProjects.length ? recentProjects : projects.slice(0, 3)).map((p) => (
-                <DropLink key={p.id} to={`/projects/${p.key}/board`} onClick={close} icon={<ProjectAvatar project={p} />} sub="Scrum project">
+                <DropLink key={p.id} to={`/projects/${p.key}/sprints`} onClick={close} icon={<ProjectAvatar project={p} />} sub={p.engineering ? 'Engineering' : 'Project'}>
                   {p.name} ({p.key})
                 </DropLink>
               ))}
@@ -139,30 +134,12 @@ export function TopNav() {
         <NavLink to="/meetings" className={({ isActive }) => cn('flex h-8 items-center rounded-lg px-2.5 text-[14px] font-medium hover:bg-hover', isActive ? 'text-accent' : 'text-fg')}>
           Meetings
         </NavLink>
-        <NavDropdown label="Dashboards" to="/dashboards">
-          {(close) => (
-            <>
-              <DropHeading>Dashboards</DropHeading>
-              {dashboards.map((d) => (
-                <DropLink key={d.id} to={`/dashboards/${d.id}`} onClick={close} icon={<LayoutDashboard className="size-4 text-muted" />}>
-                  {d.name}
-                </DropLink>
-              ))}
-              <div className="my-2 h-px bg-line" />
-              <DropLink to="/dashboards" onClick={close}>
-                View all dashboards
-              </DropLink>
-            </>
-          )}
-        </NavDropdown>
         <NavLink to="/people" className={({ isActive }) => cn('flex h-8 items-center rounded-lg px-2.5 text-[14px] font-medium hover:bg-hover', isActive ? 'text-accent' : 'text-fg')}>
           People
         </NavLink>
       </nav>
 
-      <Button variant="primary" size="sm" className="ml-2 rounded-full px-4" icon={<Plus className="size-4" strokeWidth={2.6} />} onClick={() => openCreate()}>
-        Create
-      </Button>
+
 
       <div className="flex-1" />
 

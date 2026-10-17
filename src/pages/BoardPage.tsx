@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   DndContext,
   DragOverlay,
@@ -56,6 +56,17 @@ export default function BoardPage() {
   const activeSprints = useMemo(() => sprints.filter((s) => s.projectId === project.id && s.state === 'active').sort((a, b) => a.order - b.order), [sprints, project.id])
   // Several sprints can run at once; the board shows one at a time and remembers which.
   const [sprintId, setSprintId] = usePersistentState<string | null>(`sb.board.sprint.${project.id}`, null)
+  // "Board" on the Sprints page links here with ?sprint=…; remember it, then drop it from the URL.
+  const [params, setParams] = useSearchParams()
+  const wanted = params.get('sprint')
+  useEffect(() => {
+    if (!wanted) return
+    setSprintId(wanted)
+    setParams((p) => {
+      p.delete('sprint')
+      return p
+    }, { replace: true })
+  }, [wanted]) // eslint-disable-line react-hooks/exhaustive-deps
   const sprint = activeSprints.find((s) => s.id === sprintId) ?? activeSprints[0] ?? null
   const [completeOpen, setCompleteOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
@@ -70,12 +81,12 @@ export default function BoardPage() {
         <BoardHeader project={project} title="Active sprints" />
         <EmptyState
           icon="🛹"
-          title="Get started in the backlog"
-          action={<PillButton onClick={() => navigate(`/projects/${project.key}/backlog`)}>Go to backlog</PillButton>}
+          title="No sprint is running"
+          action={<PillButton onClick={() => navigate(`/projects/${project.key}/sprints`)}>Go to sprints</PillButton>}
         >
           {future.length
-            ? `There's no active sprint. Plan ${future[0]!.name} in the backlog, then start it to see its issues here.`
-            : 'Plan and start a sprint to see issues here. Create a sprint in the backlog, drag issues into it, and press Start sprint.'}
+            ? `Start ${future[0]!.name} on the Sprints page to see its tasks here.`
+            : 'Create a sprint on the Sprints page and start it to see its tasks here.'}
         </EmptyState>
       </div>
     )
@@ -105,15 +116,14 @@ export default function BoardPage() {
               </Tooltip>
             )}
             <Button variant="default" onClick={() => setCompleteOpen(true)}>
-              Complete sprint
+              Finish sprint
             </Button>
             <Menu
               trigger={<Button variant="default" aria-label="Sprint actions" icon={<MoreHorizontal className="size-4" />} />}
               items={[
                 { label: 'Edit sprint', onClick: () => setEditOpen(true) },
                 { label: 'Manage columns', icon: <Columns3 className="size-4" />, onClick: () => navigate(`/projects/${project.key}/settings/columns`) },
-                { label: 'Go to backlog', onClick: () => navigate(`/projects/${project.key}/backlog`) },
-                { label: 'Sprint reports', onClick: () => navigate(`/projects/${project.key}/reports`) },
+                { label: 'Go to sprints', onClick: () => navigate(`/projects/${project.key}/sprints`) },
               ]}
             />
           </>
@@ -166,7 +176,7 @@ function SprintTabs({ project, sprints, current, onChange }: { project: Project;
           ))}
         </div>
       )}
-      <Link to={`/projects/${project.key}/backlog`} className="text-[12.5px] font-medium text-muted hover:text-fg hover:underline">
+      <Link to={`/projects/${project.key}/sprints`} className="text-[12.5px] font-medium text-muted hover:text-fg hover:underline">
         + Start another sprint
       </Link>
     </div>
@@ -181,7 +191,7 @@ function BoardHeader({ project, title, right, children }: { project: Project; ti
           Projects
         </Link>
         <span>/</span>
-        <Link to={`/projects/${project.key}/board`} className="hover:text-fg hover:underline">
+        <Link to={`/projects/${project.key}/sprints`} className="hover:text-fg hover:underline">
           {project.name}
         </Link>
       </div>

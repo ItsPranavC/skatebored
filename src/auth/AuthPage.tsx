@@ -6,7 +6,7 @@ import { Spinner } from '@/components/ui/primitives'
 /** Brand-forward auth screen: skatebored hero type on the left, Clerk's form on the right. */
 export default function AuthPage({ mode }: { mode: 'sign-in' | 'sign-up' }) {
   const { isLoaded, isSignedIn } = useAuth()
-  if (isLoaded && isSignedIn) return <Navigate to="/your-work" replace />
+  if (isLoaded && isSignedIn) return <Navigate to="/projects" replace />
   return (
     <main className="grid min-h-full bg-canvas lg:grid-cols-[1.1fr_1fr]">
       <section className="relative hidden flex-col justify-between overflow-hidden border-r border-line p-12 lg:flex">

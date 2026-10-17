@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { addWeeks, differenceInCalendarDays, format } from 'date-fns'
 import { CheckCircle2, CircleDashed } from 'lucide-react'
-import type { Sprint, SprintKind, SprintStep, SprintStepKey } from '@/types'
+import type { Project, Sprint, SprintKind, SprintStep, SprintStepKey } from '@/types'
 import { useStore } from '@/store/store'
 import { toast } from '@/store/ui'
 import { cn, sumPoints, toDate } from '@/lib/utils'
@@ -141,6 +140,96 @@ export function StartSprintModal({ sprint, open, onClose }: { sprint: Sprint | n
   )
 }
 
+// ───────────────────────────── New sprint ─────────────────────────────
+
+export function NewSprintModal({ project, open, onClose }: { project: Project; open: boolean; onClose: () => void }) {
+  const createSprint = useStore((s) => s.createSprint)
+  const sprints = useStore((s) => s.sprints)
+  const [name, setName] = useState('')
+  const [goal, setGoal] = useState('')
+  const [start, setStart] = useState('')
+  const [end, setEnd] = useState('')
+  const [kind, setKind] = useState<SprintKind | null>(null)
+  const [steps, setSteps] = useState<Partial<Record<SprintStepKey, SprintStep>>>({})
+  useEffect(() => {
+    if (!open) return
+    const n = sprints.filter((s) => s.projectId === project.id).reduce((m, s) => Math.max(m, parseInt(s.name.match(/(\d+)\s*$/)?.[1] ?? '0', 10)), 0)
+    const now = new Date()
+    now.setSeconds(0, 0)
+    setName(`${project.key} Sprint ${n + 1}`)
+    setGoal('')
+    setStart(toLocal(now))
+    setEnd(toLocal(addWeeks(now, 2)))
+    setKind(null)
+    setSteps({})
+  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+  const s = start ? fromLocal(start) : null
+  const e = end ? fromLocal(end) : null
+  const error = !name.trim()
+    ? 'Sprint name is required'
+    : project.engineering && !kind
+      ? 'Pick Research or Implementation'
+      : s && e && e <= s
+        ? 'End date must be after the start date'
+        : null
+  const submit = () => {
+    if (error) return
+    const sprint = createSprint(project.id, {
+      name: name.trim(),
+      goal: goal.trim(),
+      startDate: s?.toISOString() ?? null,
+      endDate: e?.toISOString() ?? null,
+      ...(project.engineering ? { kind, steps: Object.fromEntries(Object.entries(steps).map(([k, st]) => [k, { ...st, docs: cleanDocs(st.docs) }])) } : {}),
+    })
+    toast({ title: `${sprint.name} created`, tone: 'success' })
+    onClose()
+  }
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="New sprint"
+      width={project.engineering ? 600 : 520}
+      footer={
+        <>
+          <Button variant="subtle" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="primary" disabled={!!error} onClick={submit}>
+            Create sprint
+          </Button>
+        </>
+      }
+    >
+      <form
+        className="space-y-4"
+        onSubmit={(ev) => {
+          ev.preventDefault()
+          submit()
+        }}
+      >
+        <Field label="Sprint name" required>
+          <Input autoFocus value={name} onChange={(ev) => setName(ev.target.value)} />
+        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Start">
+            <Input type="datetime-local" value={start} onChange={(ev) => setStart(ev.target.value)} />
+          </Field>
+          <Field label="End">
+            <Input type="datetime-local" value={end} onChange={(ev) => setEnd(ev.target.value)} />
+          </Field>
+        </div>
+        <Field label="Goal">
+          <Textarea rows={2} value={goal} onChange={(ev) => setGoal(ev.target.value)} />
+        </Field>
+        {project.engineering && <SprintPlanFields kind={kind} steps={steps} onKind={setKind} onSteps={setSteps} />}
+        {error && name && <p className="text-[13px] text-accent">{error}</p>}
+        <button type="submit" className="hidden" />
+      </form>
+    </Modal>
+  )
+}
+
 // ───────────────────────────── Edit sprint ─────────────────────────────
 
 export function EditSprintModal({ sprint, open, onClose }: { sprint: Sprint | null; open: boolean; onClose: () => void }) {
@@ -229,7 +318,6 @@ export function EditSprintModal({ sprint, open, onClose }: { sprint: Sprint | nu
 // ───────────────────────────── Complete sprint ─────────────────────────────
 
 export function CompleteSprintModal({ sprint, open, onClose }: { sprint: Sprint | null; open: boolean; onClose: () => void }) {
-  const navigate = useNavigate()
   const completeSprint = useStore((s) => s.completeSprint)
   const project = useStore((s) => s.projects.find((p) => p.id === sprint?.projectId))
   const allSprints = useStore((s) => s.sprints)
@@ -240,7 +328,7 @@ export function CompleteSprintModal({ sprint, open, onClose }: { sprint: Sprint 
   const future = allSprints.filter((s) => s.projectId === sprint?.projectId && s.state === 'future').sort((a, b) => a.order - b.order)
   const [dest, setDest] = useState<string>('backlog')
   useEffect(() => {
-    if (open) setDest(future[0]?.id ?? 'backlog')
+    if (open) setDest(future[0]?.id ?? 'new')
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const submit = () => {
@@ -249,10 +337,9 @@ export function CompleteSprintModal({ sprint, open, onClose }: { sprint: Sprint 
     completeSprint(sprint.id, dest as 'backlog' | 'new' | string)
     onClose()
     toast({
-      title: `${sprint.name} completed`,
+      title: `${sprint.name} finished`,
       description: `${completed.length} issues done${openIssues.length ? ` · ${openIssues.length} moved to ${destName}` : ''}.`,
       tone: 'success',
-      action: { label: 'View sprint report', onClick: () => navigate(`/projects/${project.key}/reports/sprint-report?sprint=${sprint.id}`) },
     })
   }
 
@@ -262,7 +349,7 @@ export function CompleteSprintModal({ sprint, open, onClose }: { sprint: Sprint 
     <Modal
       open={open}
       onClose={onClose}
-      title={`Complete ${sprint?.name ?? 'sprint'}`}
+      title={`Finish ${sprint?.name ?? 'sprint'}`}
       width={540}
       footer={
         <>
@@ -270,7 +357,7 @@ export function CompleteSprintModal({ sprint, open, onClose }: { sprint: Sprint 
             Cancel
           </Button>
           <Button variant="primary" onClick={submit}>
-            Complete sprint
+            Finish sprint
           </Button>
         </>
       }
@@ -296,17 +383,17 @@ export function CompleteSprintModal({ sprint, open, onClose }: { sprint: Sprint 
           </ul>
         </div>
         {openIssues.length > 0 ? (
-          <Field label="Move open issues to">
+          <Field label="Move unfinished tasks to">
             <Select
               value={dest}
               onChange={setDest}
-              options={[...future.map((f) => ({ value: f.id, label: f.name })), { value: 'new', label: 'New sprint' }, { value: 'backlog', label: 'Backlog' }]}
+              options={[...future.map((f) => ({ value: f.id, label: f.name })), { value: 'new', label: 'New sprint' }]}
             />
           </Field>
         ) : (
           <p className="text-[13px] text-muted">Every issue is done. Completed issues stay with this sprint for reporting.</p>
         )}
-        <p className="text-xs text-subtle">Sub-tasks are moved with their parent. Completed issues will no longer show on the board.</p>
+        <p className="text-xs text-subtle">Finished sprints stay on the Sprints page under Finished.</p>
       </div>
     </Modal>
   )

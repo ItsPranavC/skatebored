@@ -85,13 +85,13 @@ function Palette({ onClose }: { onClose: () => void }) {
           icon: <ProjectAvatar project={p} size={20} />,
           label: `${p.name}`,
           sub: `${p.key} · Scrum board`,
-          run: go(() => navigate(`/projects/${p.key}/board`)),
+          run: go(() => navigate(`/projects/${p.key}/sprints`)),
         }),
       )
       out.push({ id: 'a-create', group: 'Actions', icon: <Plus className="size-4 text-muted" />, label: 'Create issue', right: <Kbd>c</Kbd>, run: go(() => openCreate(currentProject ? { projectId: currentProject.id } : {})) })
       if (currentProject) {
         if (currentProject.type === 'scrum')
-          out.push({ id: 'a-backlog', group: 'Actions', icon: <ListTodo className="size-4 text-muted" />, label: `Go to ${currentProject.key} backlog`, run: go(() => navigate(`/projects/${currentProject.key}/backlog`)) })
+          out.push({ id: 'a-sprints', group: 'Actions', icon: <ListTodo className="size-4 text-muted" />, label: `Go to ${currentProject.key} sprints`, run: go(() => navigate(`/projects/${currentProject.key}/sprints`)) })
         out.push({ id: 'a-board', group: 'Actions', icon: <Columns3 className="size-4 text-muted" />, label: `Go to ${currentProject.key} board`, run: go(() => navigate(`/projects/${currentProject.key}/board`)) })
       }
       out.push({
@@ -116,7 +116,7 @@ function Palette({ onClose }: { onClose: () => void }) {
     projects
       .filter((p) => p.name.toLowerCase().includes(term) || p.key.toLowerCase().includes(term))
       .forEach((p) =>
-        out.push({ id: `p-${p.id}`, group: 'Projects', icon: <ProjectAvatar project={p} size={20} />, label: p.name, sub: p.key, run: go(() => navigate(`/projects/${p.key}/board`)) }),
+        out.push({ id: `p-${p.id}`, group: 'Projects', icon: <ProjectAvatar project={p} size={20} />, label: p.name, sub: p.key, run: go(() => navigate(`/projects/${p.key}/sprints`)) }),
       )
     filters
       .filter((f) => f.name.toLowerCase().includes(term))

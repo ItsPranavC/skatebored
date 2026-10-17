@@ -6,19 +6,15 @@ import { ClerkWithRouter } from '@/auth/ClerkWithRouter'
 import { RequireAuth } from '@/auth/RequireAuth'
 const AuthPage = lazy(() => import('@/auth/AuthPage'))
 const BoardPage = lazy(() => import('@/pages/BoardPage'))
-const BacklogPage = lazy(() => import('@/pages/BacklogPage'))
+const SprintsPage = lazy(() => import('@/pages/SprintsPage'))
 const IssuePage = lazy(() => import('@/pages/IssuePage'))
-const ReportsPage = lazy(() => import('@/pages/ReportsPage'))
 const DashboardsPage = lazy(() => import('@/pages/DashboardsPage'))
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'))
 const ProjectsPage = lazy(() => import('@/pages/ProjectsPage'))
-const TimelinePage = lazy(() => import('@/pages/TimelinePage'))
-const ReleasesPage = lazy(() => import('@/pages/ReleasesPage'))
 const ProjectSettingsPage = lazy(() => import('@/pages/ProjectSettingsPage'))
 const PeoplePage = lazy(() => import('@/pages/PeoplePage'))
 const IssuesSearchPage = lazy(() => import('@/pages/IssuesSearchPage'))
 const FiltersPage = lazy(() => import('@/pages/FiltersPage'))
-const YourWorkPage = lazy(() => import('@/pages/YourWorkPage'))
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'))
 const AgentsPage = lazy(() => import('@/pages/AgentsPage'))
 const CalendarPage = lazy(() => import('@/pages/CalendarPage'))
@@ -40,9 +36,9 @@ export default function App() {
             <Route path="sign-up/*" element={<AuthPage mode="sign-up" />} />
             <Route element={<RequireAuth />}>
               <Route element={<AppLayout />}>
-                <Route index element={<Navigate to="/your-work" replace />} />
+                <Route index element={<Navigate to="/projects" replace />} />
                 <Route element={<PlainLayout />}>
-                  <Route path="your-work" element={<YourWorkPage />} />
+                  <Route path="your-work" element={<Navigate to="/projects" replace />} />
                   <Route path="projects" element={<ProjectsPage />} />
                   <Route path="issues" element={<IssuesSearchPage />} />
                   <Route path="filters" element={<FiltersPage />} />
@@ -58,15 +54,13 @@ export default function App() {
                   <Route path="*" element={<NotFoundPage />} />
                 </Route>
                 <Route path="projects/:projectKey" element={<ProjectLayout />}>
-                  <Route index element={<Navigate to="board" replace />} />
+                  <Route index element={<Navigate to="sprints" replace />} />
+                  <Route path="sprints" element={<SprintsPage />} />
                   <Route path="board" element={<BoardPage />} />
-                  <Route path="backlog" element={<BacklogPage />} />
-                  <Route path="timeline" element={<TimelinePage />} />
-                  <Route path="reports" element={<ReportsPage />} />
-                  <Route path="reports/:report" element={<ReportsPage />} />
-                  <Route path="issues" element={<IssuesSearchPage />} />
-                  <Route path="releases" element={<ReleasesPage />} />
-                  <Route path="releases/:versionId" element={<ReleasesPage />} />
+                  {/* Backlog, timeline, reports, issues and releases were removed to keep projects simple. */}
+                  {['backlog', 'timeline', 'reports/*', 'issues', 'releases/*'].map((p) => (
+                    <Route key={p} path={p} element={<Navigate to="../sprints" replace />} />
+                  ))}
                   <Route path="settings" element={<ProjectSettingsPage />} />
                   <Route path="settings/:tab" element={<ProjectSettingsPage />} />
                 </Route>

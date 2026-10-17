@@ -254,7 +254,7 @@ function Profile({ user }: { user: User }) {
             {places.length === 0 && <div className="text-[13px] text-muted">Not a member of any project.</div>}
             <div className="space-y-1">
               {places.map((p) => (
-                <Link key={p.id} to={`/projects/${p.key}/board`} className="-mx-2 flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-hover">
+                <Link key={p.id} to={`/projects/${p.key}/sprints`} className="-mx-2 flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-hover">
                   <ProjectAvatar project={p} size={28} />
                   <div className="min-w-0">
                     <div className="truncate text-[13px] font-medium">{p.name}</div>

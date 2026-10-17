@@ -10,7 +10,7 @@ export default function NotFoundPage() {
           bailed <span className="text-accent">on that one.</span>
         </h1>
         <p className="mt-4 text-lg text-muted">This page doesn’t exist, or it was moved. Let’s get you back on the board.</p>
-        <PillButton className="mt-8" onClick={() => navigate('/your-work')}>
+        <PillButton className="mt-8" onClick={() => navigate('/projects')}>
           Back to your work
         </PillButton>
       </div>

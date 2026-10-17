@@ -36,8 +36,8 @@ function useGlobalShortcuts() {
       const k = e.key
       if (pending.current === 'g') {
         pending.current = null
-        const map: Record<string, string> = { d: '/dashboards', p: '/projects', i: '/issues', f: '/filters', y: '/your-work' }
-        if (projectKey) Object.assign(map, { a: `/projects/${projectKey}/board`, b: `/projects/${projectKey}/backlog`, r: `/projects/${projectKey}/reports`, t: `/projects/${projectKey}/timeline` })
+        const map: Record<string, string> = { p: '/projects', c: '/calendar', m: '/meetings' }
+        if (projectKey) Object.assign(map, { s: `/projects/${projectKey}/sprints`, a: `/projects/${projectKey}/board` })
         if (map[k]) {
           e.preventDefault()
           navigate(map[k]!)
@@ -56,8 +56,8 @@ function useGlobalShortcuts() {
       } else if (k === '?') {
         e.preventDefault()
         useUI.getState().setShortcutsOpen(true)
-      } else if (projectKey && ['1', '2', '3', '4'].includes(k)) {
-        const routes = ['backlog', 'board', 'reports', 'timeline']
+      } else if (projectKey && ['1', '2'].includes(k)) {
+        const routes = ['sprints', 'board']
         navigate(`/projects/${projectKey}/${routes[Number(k) - 1]}`)
       }
     }
@@ -67,10 +67,10 @@ function useGlobalShortcuts() {
 }
 
 const SHORTCUTS: [string, [string, string][]][] = [
-  ['Global', [['c', 'Create issue'], ['/', 'Quick search'], ['⌘ K', 'Quick search'], ['?', 'Keyboard shortcuts'], ['g d', 'Go to dashboards'], ['g p', 'Go to projects'], ['g i', 'Go to issue search'], ['g f', 'Go to filters'], ['g y', 'Go to your work']]],
-  ['Project', [['g a', 'Active sprint board'], ['g b', 'Backlog'], ['g r', 'Reports'], ['g t', 'Timeline'], ['1 / 2 / 3 / 4', 'Backlog · Board · Reports · Timeline']]],
+  ['Global', [['c', 'Create task'], ['/', 'Quick search'], ['⌘ K', 'Quick search'], ['?', 'Keyboard shortcuts'], ['g p', 'Go to projects'], ['g c', 'Go to calendar'], ['g m', 'Go to meetings']]],
+  ['Project', [['g s', 'Sprints'], ['g a', 'Board'], ['1 / 2', 'Sprints · Board']]],
   ['Issue (when open)', [['e', 'Edit summary'], ['a', 'Assign'], ['i', 'Assign to me'], ['m', 'Comment'], ['l', 'Edit labels'], ['.', 'Operations menu'], ['Esc', 'Close']]],
-  ['Board & backlog', [['j / k', 'Next / previous issue'], ['Enter', 'Open selected issue'], ['f', 'Focus filter']]],
+  ['Board', [['j / k', 'Next / previous issue'], ['Enter', 'Open selected issue'], ['f', 'Focus filter']]],
 ]
 
 function ShortcutsModal() {

@@ -48,8 +48,8 @@ export function ClerkWithRouter({ children }: { children: ReactNode }) {
       routerReplace={(to) => navigate(to, { replace: true })}
       signInUrl="/sign-in"
       signUpUrl="/sign-up"
-      signInFallbackRedirectUrl="/your-work"
-      signUpFallbackRedirectUrl="/your-work"
+      signInFallbackRedirectUrl="/projects"
+      signUpFallbackRedirectUrl="/projects"
       afterSignOutUrl="/sign-in"
       appearance={{
         variables: {

@@ -103,7 +103,7 @@ export default function ProjectsPage() {
                         </button>
                       </td>
                       <td className="px-3 py-2.5">
-                        <Link to={`/projects/${p.key}/board`} className="flex items-center gap-2.5 font-medium hover:text-accent">
+                        <Link to={`/projects/${p.key}/sprints`} className="flex items-center gap-2.5 font-medium hover:text-accent">
                           <ProjectAvatar project={p} />
                           {p.name}
                         </Link>

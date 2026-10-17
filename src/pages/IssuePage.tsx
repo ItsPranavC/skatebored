@@ -31,7 +31,7 @@ export default function IssuePage() {
           <p className="mt-3 text-muted">The issue doesn’t exist, was deleted, or you don’t have permission to view it.</p>
           <div className="mt-6 flex items-center gap-4">
             <PillButton onClick={() => navigate('/issues')}>Search issues</PillButton>
-            <Link to="/your-work" className="text-sm text-muted hover:text-fg hover:underline">
+            <Link to="/projects" className="text-sm text-muted hover:text-fg hover:underline">
               Back to your work
             </Link>
           </div>
