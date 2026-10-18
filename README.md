@@ -83,6 +83,13 @@ Every agent has one **current task** slot, filled by the owner (Agents page, or 
 | `start_task` | Make an issue the current task (assigns unassigned work to the owner, moves To Do → In Progress; refuses teammates' issues) |
 | `update_task_status`, `add_comment` | Move through the workflow by status name; post progress |
 | `complete_task` | Post a summary, move to In Review, clear the slot |
+| `list_people`, `list_projects`, `create_project`, `update_project` | Members; projects with team (engineering / other), lead, members, repo |
+| `list_sprints`, `create_sprint`, `update_sprint`, `start_sprint`, `finish_sprint`, `delete_sprint` | Sprints, incl. engineering research / implementation steps (Google Docs, presentation times, implementation date) |
+| `create_task`, `update_task`, `delete_task` | Any task field: type, priority, assignee, sprint, points, labels, due date, status, epic, flag |
+| `list_events`, `create_event`, `update_event`, `delete_event` | Team calendar (relayed to members' Google Calendars) |
+| `list_meetings`, `get_meeting`, `create_meeting`, `update_meeting`, `delete_meeting`, `add_meeting_task`, `dismiss_meeting_task` | Meeting notes from a transcript and their suggested tasks |
+
+Management tools mirror the app's store actions (`server/manage.ts`): same records, history and notifications, written through `applyOps` as the owner. Times without an offset are read in `TEAM_TIMEZONE`. Deleting a whole project stays app-only.
 
 Connect Claude Code:
 

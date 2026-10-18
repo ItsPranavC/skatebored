@@ -5,6 +5,7 @@ import { HttpError } from './auth.js'
 import { requireAgent, setCurrentIssue, type AgentRow } from './agents.js'
 import { waitUntil } from '@vercel/functions'
 import { docLine, docsOverview, docStats, docsConfigured, ensureFreshDocs, getDoc, listDocs, searchDocs } from './docs.js'
+import { registerManageTools } from './mcpManage.js'
 import { addComment, issueLine, loadSnapshot, lookups, patchIssue, renderIssue, sortTasks, sprintPlanLines, type Issue, type Lookups, type Project, type Snapshot } from './workspace.js'
 
 /**
@@ -412,6 +413,13 @@ function build(ctx: Ctx, intro: string) {
     }),
   )
 
+  registerManageTools(server, {
+    data: ctx.data,
+    actor: () => ({ memberId: ctx.agent.owner_user_id, clerkId: ctx.agent.owner_clerk_id }),
+    appUrl: ctx.appUrl,
+    guard,
+  })
+
   server.registerPrompt(
     'work_on_current_task',
     { title: 'Work on my current skatebored task', description: 'Loads your owner, current task and project context, then starts work.' },
@@ -459,6 +467,7 @@ export async function mcp(req: Request) {
     `You are "${agent.name}", a coding agent working for ${o.name}${o.title ? ` (${o.title})` : ''} on the skatebored scrum workspace (${appUrl}).`,
     cur ? `Your current task is ${cur.key}: ${cur.summary}. Call get_current_task for the full brief before starting.` : `You have no current task yet. Call get_current_task to see ${o.name}'s open work, then start_task, or ask ${o.name}.`,
     'Work only on your current task unless your owner says otherwise. Use get_project_context for the sprint goal and team. Post short progress comments with add_comment, and finish with complete_task (summary, how to verify, branch/PR).',
+    `When ${o.name} asks, you can also run the workspace the way they can in the app: projects (list/create/update_project), sprints (list/create/update/start/finish/delete_sprint, incl. research or implementation steps with Google Docs and presentation times), tasks (create/update/delete_task), the team calendar (list/create/update/delete_event) and meetings (create_meeting from a transcript, get_meeting, add_meeting_task). Times without an offset are in the team's timezone. Confirm before deleting anything.`,
     `Everything you change is recorded as ${o.name}'s action and labelled with your agent name, so be accurate.`,
     ...(docs.files
       ? [

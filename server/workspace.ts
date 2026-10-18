@@ -32,6 +32,7 @@ export interface Project {
   repo?: string | null
   estimation: 'points' | 'count'
   engineering?: boolean
+  issueCounter: number
 }
 export interface Sprint {
   id: string
@@ -42,6 +43,7 @@ export interface Sprint {
   startDate: string | null
   endDate: string | null
   order: number
+  completedAt?: string | null
   kind?: 'research' | 'implementation' | null
   steps?: Record<string, { docs?: string[]; presentAt?: string | null; date?: string | null }>
 }
@@ -105,11 +107,52 @@ export interface Comment {
   createdAt: string
 }
 
+export interface TeamEvent {
+  id: string
+  title: string
+  description: string
+  location: string
+  start: string
+  durationMinutes: number
+  projectId: string | null
+  createdById: string
+  createdAt: string
+  updatedAt: string
+}
+export interface MeetingSuggestion {
+  id: string
+  summary: string
+  description: string
+  type: 'task' | 'bug'
+  priority: Issue['priority']
+  assigneeId: string | null
+  sprintId: string | null
+  storyPoints: number | null
+  rationale: string
+  issueId: string | null
+  dismissed: boolean
+}
+export interface Meeting {
+  id: string
+  title: string
+  date: string
+  projectId: string | null
+  createdById: string
+  summary: string
+  keyPoints: string[]
+  decisions: string[]
+  openQuestions: string[]
+  attendees: string[]
+  suggestions: MeetingSuggestion[]
+}
+
 export interface Snapshot {
   users: User[]
   projects: Project[]
   sprints: Sprint[]
   issues: Issue[]
+  events: TeamEvent[]
+  meetings: Meeting[]
 }
 
 /** Loads the collections the agent tools need (comments are fetched per issue). */
@@ -117,10 +160,10 @@ export async function loadSnapshot(): Promise<Snapshot> {
   await ensureSchema()
   const { rows } = await pool().query<{ collection: keyof Snapshot; data: never }>(
     `select collection, data from sb_records
-     where workspace_id = $1 and not deleted and collection in ('users', 'projects', 'sprints', 'issues')`,
+     where workspace_id = $1 and not deleted and data is not null and collection in ('users', 'projects', 'sprints', 'issues', 'events', 'meetings')`,
     [WORKSPACE_ID],
   )
-  const s: Snapshot = { users: [], projects: [], sprints: [], issues: [] }
+  const s: Snapshot = { users: [], projects: [], sprints: [], issues: [], events: [], meetings: [] }
   for (const r of rows) s[r.collection].push(r.data)
   return s
 }
@@ -147,7 +190,9 @@ export function lookups(s: Snapshot) {
   const byKey = new Map(s.issues.map((i) => [i.key.toUpperCase(), i]))
   const userName = (id: string | null | undefined) => (id ? (users.get(id)?.name ?? 'Unknown') : 'Unassigned')
   const status = (i: Issue) => projects.get(i.projectId)?.statuses.find((x) => x.id === i.statusId)
-  return { users, projects, sprints, issues, byKey, userName, status }
+  const events = new Map(s.events.map((e) => [e.id, e]))
+  const meetings = new Map(s.meetings.map((m) => [m.id, m]))
+  return { users, projects, sprints, issues, byKey, userName, status, events, meetings }
 }
 export type Lookups = ReturnType<typeof lookups>
 

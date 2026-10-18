@@ -19,6 +19,9 @@ for (const f of ['.env.local', '.env.development.local']) {
 const TEST_WS = `sbtest-mcp-${Date.now().toString(36)}`
 process.env.WORKSPACE_ID = TEST_WS
 process.env.APP_URL = 'https://skatebored.test'
+// Never copy test events to anyone's Google Calendar.
+process.env.COMPOSIO_API_KEY = ''
+process.env.TEAM_TIMEZONE = 'America/Chicago'
 // Knowledge base on, with a fresh "last sync" so the test never calls Google.
 process.env.DRIVE_FOLDER_ID = 'test-folder'
 process.env.GOOGLE_SERVICE_ACCOUNT_JSON ??= JSON.stringify({ client_email: 'test@example.com', private_key: 'unused' })
@@ -34,9 +37,12 @@ const session = await clerk.sessions.createSession({ userId: user.id })
 const jwt = async () => (await clerk.sessions.getToken(session.id)).jwt
 
 let failures = 0
-const ok = (cond: unknown, label: string) => {
+const ok = (cond: unknown, label: string, detail?: string) => {
   console.log(`${cond ? '✓' : '✗'} ${label}`)
-  if (!cond) failures++
+  if (!cond) {
+    failures++
+    if (detail) console.log(`    got: ${detail.replace(/\n/g, '\n    ')}`)
+  }
 }
 const api = async (method: string, body?: unknown, query = '') => {
   const fn = (agentsApi as Record<string, (r: Request) => Promise<Response>>)[method]!
@@ -182,6 +188,89 @@ try {
   ok(comments.length === 2 && comments.every((r) => r.data.body.startsWith('🤖 Claude Code – laptop: ')), 'DB: agent comments are signed with the agent name')
   ok((await rows('history')).some((r) => r.data.field === 'status' && r.data.to === 'In Review'), 'DB: history records the status change')
   ok((await api('GET')).body.agents[0].currentIssueId === 'i3', 'app sees the agent’s new current task')
+
+  // ── managing the workspace like the owner can in the app
+  const all = (await c2.listTools()).tools.map((t) => t.name)
+  ok(['list_projects', 'create_project', 'update_project', 'list_people', 'list_sprints', 'create_sprint', 'update_sprint', 'start_sprint', 'finish_sprint', 'delete_sprint', 'create_task', 'update_task', 'delete_task', 'list_events', 'create_event', 'update_event', 'delete_event', 'list_meetings', 'get_meeting', 'create_meeting', 'add_meeting_task', 'dismiss_meeting_task', 'update_meeting', 'delete_meeting'].every((t) => all.includes(t)), `management tools listed (${all.length} tools)`)
+  ok(/Pat Teammate <pat@example.com> — Designer · TST/.test((await call(c2, 'list_people')).text), 'list_people')
+
+  // projects
+  const np = await call(c2, 'create_project', { name: 'Engine Room', key: 'eng', team: 'engineering', description: 'Research and builds' })
+  ok(/Created ENG · Engine Room \(Engineering\), with ENG Sprint 1 planned/.test(np.text), 'create_project (engineering) with a first sprint')
+  ok((await call(c2, 'create_project', { name: 'Dup', key: 'ENG', team: 'other' })).isError, 'duplicate project key → error')
+  const up = await call(c2, 'update_project', { project: 'ENG', add_members: ['pat'], lead: 'Pat Teammate' })
+  ok(/lead Pat Teammate/.test(up.text) && /members: Riley Owner, Pat Teammate/.test(up.text), 'update_project: lead + members')
+  ok(/ENG · Engine Room \(Engineering\)/.test((await call(c2, 'list_projects')).text), 'list_projects shows the team')
+
+  // sprints
+  ok(/engineering project: say whether/.test((await call(c2, 'create_sprint', { project: 'ENG' })).text), 'engineering sprint needs a type')
+  const rs = await call(c2, 'create_sprint', {
+    project: 'ENG', name: 'Embedder research', type: 'research', start: '2026-11-02', end: '2026-11-13',
+    steps: { research: { docs: ['docs.google.com/document/d/r1/edit'], presentation: '2026-11-05 15:00' }, alternatives: { presentation: '2026-11-10 14:30' } },
+  })
+  ok(/Embedder research \[planned\] · Research/.test(rs.text) && /research: presentation Thu 5 Nov 2026, 15:00/.test(rs.text) && /https:\/\/docs.google.com\/document\/d\/r1\/edit/.test(rs.text), 'create_sprint research with steps (team time, https added)', rs.text)
+  ok((await call(c2, 'create_sprint', { project: 'ENG', type: 'research', steps: { implementation: { implementation_date: '2026-11-20' } } })).isError, 'wrong step for the sprint type → error')
+  const impl = await call(c2, 'create_sprint', { project: 'ENG', name: 'Embedder build', type: 'implementation', steps: { implementation: { implementation_date: '2026-11-20', add_docs: ['https://docs.google.com/document/d/i1'] } } })
+  ok(/implementation: implementation date Fri 20 Nov 2026/.test(impl.text), 'create_sprint implementation with a date', impl.text)
+  ok((await call(c2, 'create_sprint', { project: 'TST', type: 'research' })).isError, 'non-engineering projects have no sprint types')
+  const us = await call(c2, 'update_sprint', { sprint: 'Embedder research', steps: { solution: { add_docs: ['https://docs.google.com/presentation/d/s1'], presentation: '2026-11-12T20:00:00Z' } }, goal: 'Pick an embedder' })
+  ok(/solution: presentation Thu 12 Nov 2026, 14:00/.test(us.text) && /Goal: Pick an embedder/.test(us.text) && /research: .*r1/.test(us.text), 'update_sprint merges steps (UTC input shown in team time)', us.text)
+  const ss = await call(c2, 'start_sprint', { sprint: 'Embedder research' })
+  ok(/\[running\]/.test(ss.text), 'start_sprint')
+  ok(/\[running\]/.test((await call(c2, 'start_sprint', { sprint: 'Embedder build' })).text), 'a second sprint runs alongside')
+  ok((await call(c2, 'delete_sprint', { sprint: 'Embedder build' })).isError, "can't delete a running sprint")
+  ok(/Deleted ENG Sprint 1/.test((await call(c2, 'delete_sprint', { sprint: 'ENG Sprint 1' })).text), 'delete a planned sprint')
+
+  // tasks
+  const t1 = await call(c2, 'create_task', { project: 'ENG', summary: 'Compare embedders', assignee: 'pat', priority: 'high', story_points: 3, labels: ['ml'], due_date: '2026-11-06' })
+  const t1key = t1.text.match(/(ENG-\d+)/)?.[1]
+  ok(/ENG-1 \[To Do\] Compare embedders \(task, high · 3 pts, Pat Teammate, Embedder research\)/.test(t1.text), 'create_task goes into the running sprint')
+  const sub = await call(c2, 'create_task', { project: 'ENG', summary: 'Benchmark MiniLM', parent: t1key })
+  ok(/ENG-2 \[To Do\] Benchmark MiniLM \(subtask/.test(sub.text), 'create a sub-task')
+  const ut = await call(c2, 'update_task', { key: t1key, sprint: 'Embedder build', status: 'In Progress', assignee: 'me', add_labels: ['research'] })
+  ok(/In Progress\] Compare embedders .*Riley Owner, Embedder build/.test(ut.text), 'update_task: sprint, status, assignee')
+  ok((await call(c2, 'update_task', { key: t1key, sprint: 'Nope sprint' })).isError, 'unknown sprint → error')
+  const engIssues = (await rows('issues')).filter((r) => r.data.projectId !== 'p1')
+  ok(engIssues.find((r) => r.data.key === 'ENG-2')?.data.sprintId === engIssues.find((r) => r.data.key === 'ENG-1')?.data.sprintId, 'DB: the sub-task followed its parent to the new sprint')
+  ok(engIssues.find((r) => r.data.key === 'ENG-1')?.data.labels.join() === 'ml,research', 'DB: labels added')
+  ok((await rows('notifications')).some((r) => r.data.userId === 'u-pat' && r.data.text === 'assigned you to'), 'DB: assignee was notified')
+  ok((await rows('history')).some((r) => r.data.field === 'Sprint' && r.data.to === 'Embedder build'), 'DB: history records the sprint move')
+  const fin = await call(c2, 'finish_sprint', { sprint: 'Embedder build' })
+  ok(/Embedder build finished: 0 done, 1 unfinished moved to ENG Sprint \d+\./.test(fin.text), 'finish_sprint moves unfinished work to a new sprint', fin.text)
+  ok(/Deleted ENG-1 and 1 sub-task/.test((await call(c2, 'delete_task', { key: t1key })).text), 'delete_task removes sub-tasks too')
+
+  // team calendar
+  const ev = await call(c2, 'create_event', { title: 'Embedder review', start: '2026-11-05 10:00', duration_minutes: 45, location: 'https://meet.google.com/x', project: 'ENG' })
+  const evId = ev.text.match(/id: (ev\w+)/)?.[1]
+  ok(/Added "Embedder review" on Thu 5 Nov 2026, 10:00 \(America\/Chicago\) for 45 min/.test(ev.text) && !!evId, 'create_event in team time', ev.text)
+  const evRow = (await rows('events')).find((r) => r.id === evId)
+  ok(evRow?.data.start === '2026-11-05T16:00:00.000Z' && evRow?.data.createdById === 'u-me', 'DB: event stored in UTC, created by the owner')
+  const ue = await call(c2, 'update_event', { id: evId, start: '2026-11-06 11:30', title: 'Embedder review (moved)' })
+  ok(/Updated "Embedder review \(moved\)": Fri 6 Nov 2026, 11:30/.test(ue.text), 'update_event', ue.text)
+  const le = await call(c2, 'list_events', { from: '2026-11-01', to: '2026-11-30' })
+  ok(/Embedder review \(moved\)/.test(le.text) && /research presentation · Embedder research/.test(le.text), 'list_events: team events + sprint presentations')
+  ok(/Deleted "Embedder review \(moved\)"/.test((await call(c2, 'delete_event', { id: evId })).text), 'delete_event')
+  ok((await rows('events')).find((r) => r.id === evId) && !(await call(c2, 'list_events', { from: '2026-11-01', to: '2026-11-30' })).text.includes('Embedder review'), 'deleted event is gone from the calendar')
+
+  // meetings (seeded directly: create_meeting stores the transcript in Blob storage)
+  await applyOps([{ c: 'meetings', id: 'mt1', op: 'put', d: {
+    id: 'mt1', title: 'ENG planning', date: T, projectId: null, createdById: 'u-pat', createdAt: T, transcriptPath: '', transcriptName: 't.txt', transcriptChars: 100,
+    summary: 'We planned the embedder work.', keyPoints: ['Speed matters'], decisions: ['Use MiniLM first'], openQuestions: [], attendees: ['Riley', 'Pat'],
+    suggestions: [
+      { id: 'mt1-s1', summary: 'Write the embedder doc', description: '', type: 'task', priority: 'medium', assigneeId: 'u-pat', sprintId: null, storyPoints: null, rationale: 'Pat: I will write it up', issueId: null, dismissed: false },
+      { id: 'mt1-s2', summary: 'Order pizza', description: '', type: 'task', priority: 'low', assigneeId: null, sprintId: null, storyPoints: null, rationale: '', issueId: null, dismissed: false },
+    ],
+  } }], user.id)
+  ok(/ENG planning · 2 suggested tasks to review · id: mt1/.test((await call(c2, 'list_meetings')).text), 'list_meetings')
+  ok(/Use MiniLM first/.test((await call(c2, 'get_meeting', { id: 'mt1' })).text), 'get_meeting')
+  ok(/Write the embedder doc \(task, medium, Pat Teammate, Embedder research\)/.test((await call(c2, 'add_meeting_task', { meeting: 'mt1', suggestion: 'mt1-s1', project: 'ENG' })).text), 'add_meeting_task creates the task')
+  ok(!(await call(c2, 'dismiss_meeting_task', { meeting: 'mt1', suggestion: 'mt1-s2' })).isError, 'dismiss_meeting_task')
+  const gm = await call(c2, 'get_meeting', { id: 'mt1' })
+  ok(/\[added as ENG-\d+\] Write the embedder doc/.test(gm.text) && /\[dismissed\] Order pizza/.test(gm.text), 'meeting shows what was added and dismissed')
+  const um = await call(c2, 'update_meeting', { id: 'mt1', project: 'ENG' })
+  ok(/"ENG planning" · .* · ENG/.test(um.text), 'update_meeting', um.text)
+  ok(!(await call(c2, 'delete_meeting', { id: 'mt1' })).isError && /No meetings yet/.test((await call(c2, 'list_meetings')).text), 'delete_meeting')
+  ok((await rows('sprints')).every((r) => r.updated_by === user.id), 'DB: every write is recorded as the owner')
 
   // ── revoke
   ok((await api('DELETE', { id: agentId })).status === 200, 'owner revokes the agent')

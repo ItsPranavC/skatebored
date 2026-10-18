@@ -66,12 +66,26 @@ export async function meetingsApi(req: Request) {
   }
 
   if (req.method !== 'POST') throw new HttpError(405, 'Method not allowed')
-  const body = ((await req.json().catch(() => null)) ?? {}) as { title?: unknown; date?: unknown; projectId?: unknown; transcript?: unknown; fileName?: unknown }
+  const body = ((await req.json().catch(() => null)) ?? {}) as MeetingInput
+  const meeting = await createMeeting(body, userId, await memberIdOf(userId))
+  return json({ meeting }, 201)
+}
+
+export interface MeetingInput {
+  title?: unknown
+  date?: unknown
+  projectId?: unknown
+  transcript?: unknown
+  fileName?: unknown
+}
+
+/** Stores the transcript, builds the notes and suggested tasks, and saves the meeting. Used by the app and by agents. */
+export async function createMeeting(body: MeetingInput, userId: string, memberId: string) {
+  await ensureSchema()
   const transcript = (typeof body.transcript === 'string' ? body.transcript : '').replace(/^\uFEFF/, '').trim()
   if (transcript.length < 20) throw new HttpError(400, 'That’s too short to summarize — paste or upload the full transcript')
   if (transcript.length > MAX_TRANSCRIPT_CHARS) throw new HttpError(413, `Transcripts can be up to ${MAX_TRANSCRIPT_CHARS / 1000}k characters (about 6 hours of talk)`)
   const date = typeof body.date === 'string' && !Number.isNaN(Date.parse(body.date)) ? new Date(body.date).toISOString() : new Date().toISOString()
-  const memberId = await memberIdOf(userId)
   const ctx = await workspaceContext(typeof body.projectId === 'string' ? body.projectId : null)
   const projectId = typeof body.projectId === 'string' && ctx.projects.some((p) => p.id === body.projectId) ? body.projectId : null
   const givenTitle = typeof body.title === 'string' ? body.title.trim().slice(0, 200) : ''
@@ -107,5 +121,5 @@ export async function meetingsApi(req: Request) {
     })),
   }
   await applyOps([{ c: 'meetings', id, op: 'put', d: meeting }], userId)
-  return json({ meeting }, 201)
+  return meeting
 }
